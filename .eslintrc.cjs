@@ -12,19 +12,13 @@ module.exports = {
   ],
   parserOptions: {
     ecmaVersion: 'latest',
-    sourceType: 'module'
+    sourceType: 'module',
   },
   overrides: [
-    // Packages targeting DOM
-    {
-      files: ['packages/{vue,vue-compat,runtime-dom}/**'],
-      rules: {
-        'no-restricted-globals': ['error', NodeGlobals],
-      },
-    },
     // Node scripts
     {
-      files: ['scripts/**', './*.js', 'packages/**/index.js', 'packages/size-check/**'],
+      files: ['scripts/**'],
+      node: ture,
       rules: {
         'no-restricted-globals': 'off',
         'no-restricted-syntax': 'off',

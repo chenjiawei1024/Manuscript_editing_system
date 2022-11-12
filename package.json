@@ -20,7 +20,7 @@
     "*.{js,json}": [
       "prettier --write"
     ],
-    "*.ts?(x)": [
+    "*.ts": [
       "eslint",
       "prettier --parser=typescript --write"
     ]
