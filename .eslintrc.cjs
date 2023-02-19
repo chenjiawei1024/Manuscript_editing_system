@@ -1,10 +1,13 @@
-/* eslint-env node */
-require('@rushstack/eslint-patch/modern-module-resolution');
-
 module.exports = {
   root: true,
-  parser: '@typescript-eslint/parser',
+  env: {
+    browser: true,
+    es2021: true,
+    node: true,
+  },
+  // parser: 'vue-eslint-parser',
   extends: [
+    // '@typescript-eslint/parser',
     'plugin:vue/vue3-essential',
     'eslint:recommended',
     '@vue/eslint-config-typescript',
@@ -12,17 +15,19 @@ module.exports = {
   ],
   parserOptions: {
     ecmaVersion: 'latest',
+    ecmaFeatures: {
+      jsx: true,
+    },
     sourceType: 'module',
   },
-  overrides: [
-    // Node scripts
-    {
-      files: ['scripts/**'],
-      node: ture,
-      rules: {
-        'no-restricted-globals': 'off',
-        'no-restricted-syntax': 'off',
-      },
-    },
-  ],
+  // overrides: [
+  //   // Node scripts
+  //   {
+  //     files: ['scripts/**'],
+  //     rules: {
+  //       'no-restricted-globals': 'off',
+  //       'no-restricted-syntax': 'off',
+  //     },
+  //   },
+  // ],
 };
