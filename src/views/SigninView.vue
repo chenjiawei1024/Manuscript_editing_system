@@ -25,10 +25,10 @@
       </div>
 
       <div class="button_action">
-        <button v-on:click="username = ' @gmail.com'">@gmail.com</button>
-        <button v-on:click="username = '@yahoo.com'">@yahoo.com</button>
-        <button v-on:click="username = '@outlook.com'">@outlook.com</button>
-        <button v-on:click="username = '@aol.com'">@qq.com</button>
+        <button @click="username = `${username}gmail.com`">@gmail.com</button>
+        <button @click="username = `${username}@yahoo.com`">@yahoo.com</button>
+        <button @click="username = `${username}@outlook.com`">@outlook.com</button>
+        <button @click="username = `${username}@qq.com`">@qq.com</button>
       </div>
     </div>
 

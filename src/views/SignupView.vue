@@ -33,10 +33,10 @@
       </div>
 
       <div class="button_action">
-        <button v-on:click="mail = ' @gmail.com'">@gmail.com</button>
-        <button v-on:click="mail = '@yahoo.com'">@yahoo.com</button>
-        <button v-on:click="mail = '@outlook.com'">@outlook.com</button>
-        <button v-on:click="mail = '@aol.com'">@aol.com</button>
+        <button @click="username = `${username}gmail.com`">@gmail.com</button>
+        <button @click="username = `${username}@yahoo.com`">@yahoo.com</button>
+        <button @click="username = `${username}@outlook.com`">@outlook.com</button>
+        <button @click="username = `${username}@qq.com`">@qq.com</button>
       </div>
 
       <!-- <label for="name">Confirmer l'adresse mail</label>
@@ -53,10 +53,10 @@
     <div class="in">
       <label for="name">密码</label>
       <div>
-        <v-text-field type="password">
-          <input v-model="password_confirmation" type="password" placeholder="至少8个字符" required />
-          <img v-if="password_confirmation.length >= 8" src="../assets/images/ok.svg" alt="" />
-        </v-text-field>
+        <!-- <v-text-field type="password"> -->
+        <input v-model="password_confirmation" type="password" placeholder="至少8个字符" required />
+        <img v-if="password_confirmation.length >= 8" src="../assets/images/ok.svg" alt="" />
+        <!-- </v-text-field> -->
       </div>
       <div class="password_bar">
         <div :class="{ bar: true, green: password_confirmation.length > 1 }"></div>
@@ -66,11 +66,11 @@
       </div>
       <label for="name">确认密码</label>
       <div>
-        <v-text-field type="password">
-          <input v-model="password" type="password" placeholder="再次确认密码 ..." required />
-          <img v-if="!password_confirmation" style="display: none" src="../assets/images/ok.svg" alt="" />
-          <img v-else-if="password === password_confirmation" src="../assets/images/ok.svg" alt="" />
-        </v-text-field>
+        <!-- <v-text-field type="password"> -->
+        <input v-model="password" type="password" placeholder="再次确认密码 ..." required />
+        <img v-if="!password_confirmation" style="display: none" src="../assets/images/ok.svg" alt="" />
+        <img v-else-if="password === password_confirmation" src="../assets/images/ok.svg" alt="" />
+        <!-- </v-text-field> -->
       </div>
     </div>
 
@@ -82,7 +82,7 @@
 
     <button class="log">登录</button>
 
-    <span>已经注册 ？<a href="/">登录</a> </span>
+    <span>已经注册 ？<a href="/signin">登录</a> </span>
   </div>
 </template>
 
