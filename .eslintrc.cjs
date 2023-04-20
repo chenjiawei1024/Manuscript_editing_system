@@ -5,6 +5,9 @@ module.exports = {
     es2021: true,
     node: true,
   },
+  rules: {
+    'vue/multi-word-component-names': 'off',
+  },
   // parser: 'vue-eslint-parser',
   extends: [
     // '@typescript-eslint/parser',
@@ -20,14 +23,4 @@ module.exports = {
     },
     sourceType: 'module',
   },
-  // overrides: [
-  //   // Node scripts
-  //   {
-  //     files: ['scripts/**'],
-  //     rules: {
-  //       'no-restricted-globals': 'off',
-  //       'no-restricted-syntax': 'off',
-  //     },
-  //   },
-  // ],
 };
