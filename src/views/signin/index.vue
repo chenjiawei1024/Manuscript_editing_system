@@ -1,4 +1,13 @@
 <template>
+  <v-alert
+    v-model:model-value="controlAlert"
+    class="alert"
+    density="compact"
+    position="fixed"
+    :type="controlType"
+    :text="controlText"
+    min-width="250"
+  ></v-alert>
   <div class="login-container">
     <div class="box">
       <div class="banner_high">
@@ -16,19 +25,13 @@
       <h1>{{ isActive ? 'Sign In' : '登录' }}</h1>
 
       <div class="in">
-        <label for="name">{{ isActive ? 'Email Address' : '电子邮箱' }}</label>
+        <label for="name">{{ isActive ? 'Username' : '用户名' }}</label>
         <div>
           <input
             type="text"
             v-model="username"
-            :placeholder="isActive ? 'Please enter the correct email' : '请输入正确邮箱'"
+            :placeholder="isActive ? 'Please enter your name' : '请输入您的昵称'"
           /><img v-if="username.length >= 4" src="@/assets/images/ok.svg" alt="" />
-        </div>
-
-        <div class="button_action">
-          <button @click="username = `${username}gmail.com`">@gmail.com</button>
-          <button @click="username = `${username}@outlook.com`">@outlook.com</button>
-          <button @click="username = `${username}@qq.com`">@qq.com</button>
         </div>
       </div>
 
@@ -53,13 +56,14 @@
 
       <div class="check_bar">
         <div>
-          <input type="checkbox" name="" id="" /> <label for="">{{ isActive ? 'Remember Me' : '记住账号' }}</label>
+          <input v-model="rememberMe" type="checkbox" name="" id="" />
+          <label for="">{{ isActive ? 'Remember Me' : '记住账号' }}</label>
         </div>
 
         <a href="">{{ isActive ? 'Forget Password ?' : '忘记密码？' }}</a>
       </div>
 
-      <button class="log">{{ isActive ? 'Sign In' : '登录' }}</button>
+      <button class="log" @click="signin()">{{ isActive ? 'Sign In' : '登录' }}</button>
 
       <span
         >{{ isActive ? "Don't have an account yet? " : '还没有账号？'
@@ -71,17 +75,74 @@
 
 <script lang="ts" setup>
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import axios from 'axios';
+import type { signinRespItem } from '../../types/signin';
+
+const router = useRouter();
+
+const username = ref(localStorage.getItem('user_name') || '');
 const password = ref('');
-// const userLoggedIn = ref(false);
-const username = ref('');
 const isActive = ref(false);
-// method: {
-//   changeStep() {
-//     this.$emit('nextStep', 'signinfr');
-//   },
-// },
+// 初始化rememberMe按钮
+const rememberMe = ref(!!localStorage.getItem('remember_me') || false);
+
+// 登录
+const signin = () => {
+  if (rememberMe.value) {
+    localStorage.setItem('user_name', username.value);
+    localStorage.setItem('remember_me', '1');
+  } else {
+    localStorage.removeItem('user_name');
+    localStorage.removeItem('remember_me');
+  }
+  if (password.value.length >= 8 && username.value) {
+    axios({
+      method: 'post',
+      url: '/api/user/login',
+      data: {
+        name: username.value,
+        password: password.value,
+      },
+    })
+      .then((resp: signinRespItem) => {
+        // 校验成功，存储token值, 跳转到指定路由
+        localStorage.setItem('token', resp.data.token);
+        localStorage.setItem('user_id', String(resp.data.user_id));
+        showAlertTimeOut('Login successfully!');
+        setTimeout(() => {
+          router.push('/index');
+        }, 1100);
+      })
+      .catch((error) => {
+        showAlertTimeOut(error.response.data.message, 'error');
+        console.error(error.response.data.message);
+      });
+  } else {
+    showAlertTimeOut('Please enter the correct user password', 'warning');
+  }
+};
+
+const controlAlert = ref(false);
+const controlText = ref('');
+const controlType = ref();
+const showAlertTimeOut = (text: string, type = 'success') => {
+  controlType.value = type;
+  controlText.value = text;
+  controlAlert.value = true;
+  setTimeout(() => {
+    controlAlert.value = false;
+    controlText.value = '';
+    controlType.value = '';
+  }, 1000);
+};
 </script>
 
 <style lang="scss" scoped>
 @import '@/assets/scss/login.scss';
+.alert {
+  left: 50%;
+  transform: translateX(-50%);
+  top: 40px;
+}
 </style>

@@ -1,24 +1,26 @@
 <template>
-  <v-hover v-slot="{ isHovering, props }">
-    <v-card
-      v-bind="props"
-      :height="228"
-      class="pa-3 w-100"
-      :class="isHovering && $style['card-hover']"
-      :elevation="isHovering ? 2 : 0"
-    >
-      <div :class="$style['folder-container']">
-        <img :class="$style['folder-img']" src="./imgs/folder.svg" />
-        <div :class="$style['folder-content']">
-          <span :class="$style.word">{{ isEmpty && '[空]' }}</span>
+  <div>
+    <v-hover v-slot="{ isHovering, props }">
+      <v-card
+        v-bind="props"
+        :height="228"
+        class="pa-3 w-100"
+        :class="isHovering && $style['card-hover']"
+        :elevation="isHovering ? 2 : 0"
+      >
+        <div :class="$style['folder-container']">
+          <img :class="$style['folder-img']" src="./imgs/folder.svg" />
+          <div :class="$style['folder-content']">
+            <span :class="$style.word">{{ isEmpty && '[空]' }}</span>
+          </div>
         </div>
-      </div>
-      <div :class="$style['content-container']">
-        <div :class="$style.title">{{ title }}</div>
-        <dic :class="$style.time">{{ time }}</dic>
-      </div>
-    </v-card></v-hover
-  >
+        <div :class="$style['content-container']">
+          <div :class="$style.title">{{ title }}</div>
+          <dic :class="$style.time">{{ time }}</dic>
+        </div>
+      </v-card>
+    </v-hover>
+  </div>
 </template>
 <script lang="ts" setup>
 import { ref } from 'vue';

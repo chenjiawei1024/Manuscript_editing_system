@@ -1,23 +1,25 @@
 <template>
-  <v-hover v-slot="{ isHovering, props }">
-    <v-card
-      :height="68"
-      :width="260"
-      class="pa-3"
-      v-bind="props"
-      :elevation="isHovering ? 4 : 2"
-      @click="emits('create')"
-    >
-      <div :class="$style['content-container']">
-        <v-icon :color="color" size="44" class="mr-2">{{ icon || 'mdi-folder' }}</v-icon>
-        <div :class="$style['title-container']">
-          <div :class="$style.title">{{ title }}</div>
-          <div :class="$style.subtitle">{{ subtitle }}</div>
+  <div>
+    <v-hover v-slot="{ isHovering, props }">
+      <v-card
+        :height="68"
+        :width="260"
+        class="pa-3"
+        v-bind="props"
+        :elevation="isHovering ? 4 : 2"
+        @click="emits('create')"
+      >
+        <div :class="$style['content-container']">
+          <v-icon :color="color" size="44" class="mr-2">{{ icon || 'mdi-folder' }}</v-icon>
+          <div :class="$style['title-container']">
+            <div :class="$style.title">{{ title }}</div>
+            <div :class="$style.subtitle">{{ subtitle }}</div>
+          </div>
+          <v-icon size="20" class="my-3">mdi-plus</v-icon>
         </div>
-        <v-icon size="20" class="my-3">mdi-plus</v-icon>
-      </div>
-    </v-card>
-  </v-hover>
+      </v-card>
+    </v-hover>
+  </div>
 </template>
 
 <script lang="ts" setup>

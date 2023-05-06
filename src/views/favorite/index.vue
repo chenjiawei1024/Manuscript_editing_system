@@ -32,30 +32,18 @@
           v-model:model-value="searchValue"
           density="compact"
           prepend-inner-icon="mdi-magnify"
-          placeholder="搜索文件、文件夹等"
+          placeholder="在此搜索文件~"
           class="mt-6 w-50"
           @input="debouncedSearch"
         ></v-text-field>
 
         <template #append> <v-btn icon="mdi-dots-vertical"></v-btn> </template
       ></v-app-bar>
-      <v-breadcrumbs :items="breadcrumbs">
-        <template v-slot:divider>
-          <v-icon icon="mdi-chevron-right"></v-icon>
-        </template>
-      </v-breadcrumbs>
+      <div :class="$style.title">收藏</div>
       <v-divider class="mb-2"></v-divider>
       <!-- 按钮组 -->
       <v-container class="d-flex flex-row">
         <CreateCard
-          color="#f5bf5b"
-          icon="mdi-folder"
-          title="创建文件夹"
-          subtitle="文件收藏归纳，支持分享等"
-          @create="showFolderDialog = true"
-        ></CreateCard>
-        <CreateCard
-          :class="$style['button-space']"
           color="#8fcbff"
           icon="mdi-file"
           title="创建文件"
@@ -73,15 +61,6 @@
       <!-- 文件/文件夹列表 -->
       <v-container>
         <v-row>
-          <v-col v-for="folder in folderList" xxl="1" lg="2" cols="2" md="3" sm="3" xs="6" :key="folder.folder_id">
-            <FolderCard
-              :title="folder.folder_name"
-              :time="formatDateToZHformat(String(folder.last_accessed_at))"
-              @click="openFolder(folder)"
-            ></FolderCard>
-          </v-col>
-        </v-row>
-        <v-row>
           <v-col v-for="file in fileList" xxl="1" lg="2" cols="2" md="3" sm="3" xs="6" :key="file.file_id">
             <FileCard
               :file_id="file.file_id"
@@ -90,26 +69,11 @@
               :is_favor="file.is_favorite"
               :content="file.content"
               @click="openFile(file)"
-              @like="getFileList(route.query?.f ? Number(route.query.f) : -1)"
+              @like="getFileList()"
             ></FileCard>
           </v-col>
         </v-row>
       </v-container>
-      <!-- 创建新文件夹dialog -->
-      <v-dialog v-model="showFolderDialog" width="450">
-        <v-card>
-          <v-card-title>
-            <span class="headline">Create new folder</span>
-          </v-card-title>
-          <v-card-text>
-            <v-text-field v-model="folderName" label="Folder name"></v-text-field>
-          </v-card-text>
-          <v-card-actions>
-            <v-btn color="primary" @click="createFolder">Create</v-btn>
-            <v-btn color="secondary" @click="showFolderDialog = false">Cancel</v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
       <!-- 创建新文件dialog -->
       <v-dialog v-model="showFileDialog" width="450">
         <v-card>
@@ -131,38 +95,22 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router';
+import { useRouter } from 'vue-router';
 import axios, { type AxiosResponse } from 'axios';
 
 import { formatDateToZHformat, debounce } from '@/utils/index';
-import type { FileDetailItem, FolderDetailItem, breadcrumbItem } from '@/types/manage';
+import type { FileDetailItem } from '@/types/manage';
 
-import CreateCard from './components/CreateCard/index.vue';
-import FolderCard from './components/FolderCard/index.vue';
-import FileCard from './components/FileCard/index.vue';
+import CreateCard from '../manage/components/CreateCard/index.vue';
+import FileCard from '../manage/components/FileCard/index.vue';
 
 const router = useRouter();
-const route = useRoute();
-//是否展示文件夹dialog
-const showFolderDialog = ref(false);
 //是否展示文件dialog
 const showFileDialog = ref(false);
-// 创建文件夹dialog表单
-const folderName = ref('');
 const fileName = ref('');
 // 当前父文件夹id，用于创建文件/文件夹时使用
-// const pid = ref(-1);
-// folder显示列表
-const folderList = ref<FolderDetailItem[]>([]);
 // file显示列表
 const fileList = ref<FileDetailItem[]>([]);
-const breadcrumbs = ref<breadcrumbItem[]>([
-  {
-    title: '我的文件',
-    href: '/manage',
-    to: { path: '/manage' },
-  },
-]);
 
 // 顶部菜单栏添加按钮菜单列表
 const addMenus = ref([
@@ -172,36 +120,7 @@ const addMenus = ref([
       showFileDialog.value = true;
     },
   },
-  {
-    title: '创建文件夹',
-    clickFunc: () => {
-      showFolderDialog.value = true;
-    },
-  },
 ]);
-
-const createFolder = async () => {
-  // 请求创建文件夹接口
-  axios({
-    method: 'post',
-    url: '/api/folder',
-    data: {
-      folder_name: folderName.value,
-      owner: localStorage.getItem('user_id'),
-      parent: route.query?.f,
-    },
-  })
-    .then(() => {
-      showSuccessAlert('文件夹创建成功！');
-      getFolderList(route.query?.f ? Number(route.query.f) : -1);
-      // 重置dialog
-      showFolderDialog.value = false;
-      folderName.value = '';
-    })
-    .catch((error) => {
-      console.error('登陆失败:', error);
-    });
-};
 
 const createFile = async () => {
   // 请求创建文件夹接口
@@ -211,12 +130,11 @@ const createFile = async () => {
     data: {
       file_name: fileName.value,
       owner: localStorage.getItem('user_id'),
-      parent: route.query?.f,
     },
   })
     .then(() => {
       showSuccessAlert('文稿创建成功！');
-      getFileList(route.query?.f ? Number(route.query.f) : -1);
+      getFileList();
       // 重置dialog
       showFileDialog.value = false;
       fileName.value = '';
@@ -224,19 +142,6 @@ const createFile = async () => {
     .catch((error) => {
       console.error('登陆失败:', error);
     });
-};
-
-const openFolder = (folder: FolderDetailItem) => {
-  console.log(route.matched);
-  breadcrumbs.value.push({
-    title: folder.folder_name,
-    href: `/manage?f=${folder.folder_id}`,
-    to: { path: '/manage', query: { f: folder.folder_id } },
-  });
-  router.push({ path: '/manage', query: { f: folder.folder_id } });
-  console.log(breadcrumbs.value);
-  getFolderList(folder.folder_id);
-  getFileList(folder.folder_id);
 };
 
 const openFile = (file: FileDetailItem) => {
@@ -250,26 +155,12 @@ const openFile = (file: FileDetailItem) => {
   });
 };
 
-// 获取文件夹列表请求
-const getFolderList = async (parentid?: number) => {
+// 根据时间排序，获取文件列表请求
+const getFileList = async () => {
   // 请求获取文件夹列表接口
   axios({
     method: 'get',
-    url: `/api/folder/${parentid || -1}`,
-  })
-    .then((resp: AxiosResponse<FolderDetailItem[]>) => {
-      folderList.value = resp.data;
-    })
-    .catch((error) => {
-      console.error('获取文件夹列表请求失败:', error);
-    });
-};
-// 获取文件列表请求
-const getFileList = async (parentid?: number) => {
-  // 请求获取文件夹列表接口
-  axios({
-    method: 'get',
-    url: `/api/file/${parentid || -1}`,
+    url: `/api/file/favor`,
   })
     .then((resp: AxiosResponse<FileDetailItem[]>) => {
       fileList.value = resp.data;
@@ -278,7 +169,6 @@ const getFileList = async (parentid?: number) => {
       console.error('获取文件列表请求失败:', error);
     });
 };
-getFolderList();
 getFileList();
 
 const success_text = ref('');
@@ -293,44 +183,9 @@ const showSuccessAlert = (text: string) => {
   }, 1000);
 };
 
-// 添加路由守卫，来监听路由query变化
-onBeforeRouteUpdate(async (to, from, next) => {
-  // 若存在index，则为回退
-  const index = breadcrumbs.value.findIndex((b) => b.href === to.fullPath);
-  console.log(index);
-  if (index !== -1) {
-    breadcrumbs.value.splice(index + 1);
-  }
-  if (to.query?.f) {
-    getFolderList(Number(to.query?.f));
-    getFileList(Number(to.query?.f));
-  } else {
-    getFolderList();
-    getFileList();
-  }
-  next();
-});
-
 // 搜索功能
 const searchValue = ref('');
 
-// 获取文件夹列表请求
-const getFolderListByName = async () => {
-  if (searchValue.value) {
-    axios({
-      method: 'get',
-      url: `/api/folder/search/${searchValue.value}`,
-    })
-      .then((resp: AxiosResponse<FolderDetailItem[]>) => {
-        folderList.value = resp.data;
-      })
-      .catch((error) => {
-        console.error('获取文件夹列表请求失败:', error);
-      });
-  } else {
-    getFolderList();
-  }
-};
 // 获取文件列表请求
 const getFileListByName = async () => {
   if (searchValue.value) {
@@ -349,13 +204,20 @@ const getFileListByName = async () => {
   }
 };
 const search = () => {
-  getFolderListByName();
   getFileListByName();
 };
 const debouncedSearch = debounce(search, 1000);
 </script>
 
 <style lang="scss" module>
+.title {
+  color: #202020;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 44px;
+  margin: 8px 0 2px 16px;
+}
+
 .item-hover:hover {
   background-color: rgb(247, 247, 247);
   cursor: pointer;

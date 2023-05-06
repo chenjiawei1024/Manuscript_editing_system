@@ -34,20 +34,10 @@
         </div>
 
         <div class="button_action">
-          <button @click="username = `${username}gmail.com`">@gmail.com</button>
-          <button @click="username = `${username}@outlook.com`">@outlook.com</button>
-          <button @click="username = `${username}@qq.com`">@qq.com</button>
+          <button @click="mail = `${mail}gmail.com`">@gmail.com</button>
+          <button @click="mail = `${mail}@outlook.com`">@outlook.com</button>
+          <button @click="mail = `${mail}@qq.com`">@qq.com</button>
         </div>
-
-        <!-- <label for="name">Confirmer l'adresse mail</label>
-      <div>
-        <input type="text" v-model="mail_confirm" placeholder="Confirmer l'adresse mail ..." /><img
-          v-if="!mail"
-          style="display: none"
-          src="../assets/ok.svg"
-          alt=""
-        /><img v-else-if="mail_confirm === mail" src="../assets/ok.svg" alt="" />
-      </div> -->
       </div>
 
       <div class="in">
@@ -80,7 +70,7 @@
         <a href="">忘记密码 ？</a>
       </div>
 
-      <button class="log">登录</button>
+      <button class="log" @click="signup()">注册</button>
 
       <span>已经注册 ？<a href="/signin">登录</a> </span>
     </div>
@@ -89,17 +79,37 @@
 
 <script lang="ts" setup>
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import bcrypt from 'bcryptjs';
+import axios from 'axios';
+
+const router = useRouter();
+
 const password = ref('');
-// const userLoggedIn = ref(false);
 const username = ref('');
 const mail = ref('');
-// const mail_confirm = ref('');
 const password_confirmation = ref('');
 const isActive = ref(false);
 
-// const toggle = () => {
-//   // isActive.value = !enable.value;
-// };
+// 注册
+const signup = () => {
+  axios({
+    method: 'post',
+    url: '/api/user',
+    data: {
+      name: username.value,
+      password: bcrypt.hashSync(password.value, 10),
+      email: mail.value,
+    },
+  })
+    .then(() => {
+      // 校验成功，跳转到指定路由
+      router.push('/index');
+    })
+    .catch((error) => {
+      console.error('登陆失败:', error);
+    });
+};
 </script>
 
 <style lang="scss" scoped>

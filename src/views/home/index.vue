@@ -1,1 +1,237 @@
-<template>hello</template>
+<template>
+  <div>
+    <v-container>
+      <!-- 成功提示框 -->
+      <v-alert
+        v-model="success_alert"
+        :class="$style.alert"
+        density="compact"
+        position="fixed"
+        type="success"
+        :text="success_text"
+        min-width="250"
+      ></v-alert>
+      <v-app-bar :elevation="2">
+        <template #prepend>
+          <v-menu location="bottom">
+            <template v-slot:activator="{ props }">
+              <v-app-bar-nav-icon v-bind="props" icon="mdi-plus"></v-app-bar-nav-icon>
+            </template>
+
+            <v-list>
+              <v-list-item v-for="(item, index) in addMenus" :key="index" :value="index" @click="item.clickFunc">
+                <v-list-item-title>{{ item.title }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
+        </template>
+
+        <v-divider vertical class="ml-2 mr-7 mt-6" length="18"></v-divider>
+
+        <v-text-field
+          v-model:model-value="searchValue"
+          density="compact"
+          prepend-inner-icon="mdi-magnify"
+          placeholder="在此搜索文件~"
+          class="mt-6 w-50"
+          @input="debouncedSearch"
+        ></v-text-field>
+
+        <template #append> <v-btn icon="mdi-dots-vertical"></v-btn> </template
+      ></v-app-bar>
+      <div :class="$style.title">最近</div>
+      <v-divider class="mb-2"></v-divider>
+      <!-- 按钮组 -->
+      <v-container class="d-flex flex-row">
+        <CreateCard
+          color="#8fcbff"
+          icon="mdi-file"
+          title="创建文件"
+          subtitle="开始进行文稿创作~"
+          @click="showFileDialog = true"
+        ></CreateCard>
+        <CreateCard
+          :class="$style['button-space']"
+          color="#f24e1e"
+          icon="mdi-folder-account"
+          title="创建共享文件"
+          subtitle="支持文件共享~"
+        ></CreateCard>
+      </v-container>
+      <!-- 文件/文件夹列表 -->
+      <v-container>
+        <v-row>
+          <v-col v-for="file in fileList" xxl="1" lg="2" cols="2" md="3" sm="3" xs="6" :key="file.file_id">
+            <FileCard
+              :file_id="file.file_id"
+              :title="file.file_name"
+              :time="formatDateToZHformat(String(file.last_accessed_at))"
+              :is_favor="file.is_favorite"
+              :content="file.content"
+              @click="openFile(file)"
+              @like="getFileList()"
+            ></FileCard>
+          </v-col>
+        </v-row>
+      </v-container>
+      <!-- 创建新文件dialog -->
+      <v-dialog v-model="showFileDialog" width="450">
+        <v-card>
+          <v-card-title>
+            <span class="headline">Create new file</span>
+          </v-card-title>
+          <v-card-text>
+            <v-text-field v-model="fileName" label="File name"></v-text-field>
+          </v-card-text>
+          <v-card-actions>
+            <v-btn color="primary" @click="createFile">Create</v-btn>
+            <v-btn color="secondary" @click="showFileDialog = false">Cancel</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+    </v-container>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import axios, { type AxiosResponse } from 'axios';
+
+import { formatDateToZHformat, debounce } from '@/utils/index';
+import type { FileDetailItem } from '@/types/manage';
+
+import CreateCard from '../manage/components/CreateCard/index.vue';
+import FileCard from '../manage/components/FileCard/index.vue';
+
+const router = useRouter();
+const route = useRoute();
+//是否展示文件dialog
+const showFileDialog = ref(false);
+const fileName = ref('');
+// 当前父文件夹id，用于创建文件/文件夹时使用
+// file显示列表
+const fileList = ref<FileDetailItem[]>([]);
+
+// 顶部菜单栏添加按钮菜单列表
+const addMenus = ref([
+  {
+    title: '创建文件',
+    clickFunc: () => {
+      showFileDialog.value = true;
+    },
+  },
+]);
+
+const createFile = async () => {
+  // 请求创建文件夹接口
+  axios({
+    method: 'post',
+    url: '/api/file',
+    data: {
+      file_name: fileName.value,
+      owner: localStorage.getItem('user_id'),
+    },
+  })
+    .then(() => {
+      showSuccessAlert('文稿创建成功！');
+      getFileList();
+      // 重置dialog
+      showFileDialog.value = false;
+      fileName.value = '';
+    })
+    .catch((error) => {
+      console.error('登陆失败:', error);
+    });
+};
+
+const openFile = (file: FileDetailItem) => {
+  router.push({
+    path: '/creation',
+    query: {
+      file_id: file.file_id,
+      file_name: file.file_name,
+      content: file.content,
+    },
+  });
+};
+
+// 根据时间排序，获取文件列表请求
+const getFileList = async () => {
+  // 请求获取文件夹列表接口
+  axios({
+    method: 'get',
+    url: `/api/file/all`,
+  })
+    .then((resp: AxiosResponse<FileDetailItem[]>) => {
+      fileList.value = resp.data;
+    })
+    .catch((error) => {
+      console.error('获取文件列表请求失败:', error);
+    });
+};
+getFileList();
+
+const success_text = ref('');
+const success_alert = ref(false);
+/** success弹框显示隐藏 */
+const showSuccessAlert = (text: string) => {
+  success_text.value = text;
+  success_alert.value = true;
+  setTimeout(() => {
+    success_alert.value = false;
+    success_text.value = '';
+  }, 1000);
+};
+
+// 搜索功能
+const searchValue = ref('');
+
+// 获取文件列表请求
+const getFileListByName = async () => {
+  if (searchValue.value) {
+    axios({
+      method: 'get',
+      url: `/api/file/search/${searchValue.value}`,
+    })
+      .then((resp: AxiosResponse<FileDetailItem[]>) => {
+        fileList.value = resp.data;
+      })
+      .catch((error) => {
+        console.error('获取文件列表请求失败:', error);
+      });
+  } else {
+    getFileList();
+  }
+};
+const search = () => {
+  getFileListByName();
+};
+const debouncedSearch = debounce(search, 1000);
+</script>
+
+<style lang="scss" module>
+.title {
+  color: #202020;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 44px;
+  margin: 8px 0 2px 16px;
+}
+
+.item-hover:hover {
+  background-color: rgb(247, 247, 247);
+  cursor: pointer;
+}
+
+.button-space {
+  margin-left: 24px !important;
+}
+
+.alert {
+  left: 50%;
+  transform: translateX(-50%);
+  top: 40px;
+  z-index: 10000;
+}
+</style>

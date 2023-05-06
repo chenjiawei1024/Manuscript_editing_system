@@ -14,6 +14,7 @@
       <v-list density="compact" nav>
         <v-list-item prepend-icon="mdi-home-outline" title="Home" value="home" to="home"></v-list-item>
         <v-list-item prepend-icon="mdi-folder-file-outline" title="Management" value="files" to="manage"></v-list-item>
+        <v-list-item prepend-icon="mdi-star-outline" title="Favorite" value="favorite" to="favorite"></v-list-item>
         <v-list-item prepend-icon="mdi-pencil-outline" title="Creation" value="creation" to="creation"></v-list-item>
         <v-list-item
           prepend-icon="mdi-lightbulb-outline"
