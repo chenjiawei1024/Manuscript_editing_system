@@ -13,6 +13,7 @@
     <template #prepend>
       <v-app-bar-nav-icon></v-app-bar-nav-icon>
     </template>
+    <!-- TODO: 需要修改成文件名称，若不存在，则直接显示untitled -->
     <v-app-bar-title>Creation</v-app-bar-title>
     <v-spacer></v-spacer>
 
@@ -62,16 +63,35 @@
           skin: 'snow',
           // content_css: 'dark',
           branding: false,
+          height: 580,
           plugins: 'lists link image table code help wordcount',
         }"
       />
+      <v-card class="w-100 mt-4" :class="$style['btn-container']">
+        <template v-slot:title>文稿润色功能</template>
+        <template v-slot:text>
+          <div :class="$style['btn-subcontainer']">
+            <v-btn color="primary" @click="createWordReplacement">词句替换</v-btn>
+            <v-btn color="secondary" @click="createTypoCorrection">别字纠错</v-btn>
+            <v-btn color="purple" @click="createAITitle">标题生成</v-btn>
+          </div>
+        </template>
+      </v-card>
     </div>
   </v-main>
 
   <v-navigation-drawer location="right">
-    <v-list>
-      <v-list-item v-for="n in 5" :key="n" :title="`Item ${n}`" link> </v-list-item>
+    <v-sheet color="grey-lighten-3" :class="$style['hot-news']" width="100%" height="128">
+      <div :class="$style.title">
+        <span :class="$style['title-text']">文稿润色</span>
+        <span :class="$style['title-subtext']">词句替换，别字纠错等</span>
+        <span :class="$style.circle"></span>
+      </div>
+    </v-sheet>
+    <v-list v-if="optimizedList.length">
+      <v-list-item v-for="item in optimizedList" :key="item.title" :title="item.title" link></v-list-item>
     </v-list>
+    <div v-else :class="$style['empty-text']">优化内容都会显示在此哦～</div>
   </v-navigation-drawer>
 
   <v-footer app height="72">
@@ -113,6 +133,23 @@
       <v-card-actions>
         <v-btn color="primary" @click="createFile">创建</v-btn>
         <v-btn color="secondary" @click="showCreateFileDialog = false">取消</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+  <!-- AI提问回答dialog -->
+  <v-dialog v-model="showAIDialog" width="450">
+    <v-card>
+      <v-card-title>
+        <span class="headline">回复：</span>
+      </v-card-title>
+      <v-card-text>
+        <div :class="[$style.answer, blinking && $style.blinking]">
+          {{ currentAnswer }}
+        </div>
+      </v-card-text>
+      <v-card-actions>
+        <v-btn color="primary" @click="copyToClipboard(currentAnswer)">复制回答</v-btn>
+        <v-btn color="secondary" @click="closeAIDialog">取消</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -159,9 +196,14 @@ const showHotspotDeatils = (index: number) => {
 // AI辅助搜索(问题)
 const question = ref<string>('');
 // 返回结果
-const answer = ref<string>('');
+const currentAnswer = ref('');
+const randomAnswer = ref<string>('');
+const currentIndex = ref(0);
+const typingSpeed = ref(100);
+const blinking = ref(true);
 const askAIQuestions = async () => {
-  console.log(question.value);
+  randomAnswer.value = '';
+  showAIDialog.value = true;
   axios({
     method: 'post',
     url: '/api/creation',
@@ -170,12 +212,33 @@ const askAIQuestions = async () => {
     },
   })
     .then((resp: AIRespItem) => {
-      answer.value = resp.data.result;
+      randomAnswer.value = resp.data.result;
+      typeWriter();
       console.log(resp);
     })
     .catch((error) => {
+      randomAnswer.value = '网络问题，无法获取答案，请重新尝试！';
       console.error('网络问题:', error);
     });
+};
+// 打字机回答实现
+const typeWriter = () => {
+  const intervalId = setInterval(() => {
+    if (currentIndex.value < randomAnswer.value.length) {
+      currentAnswer.value += randomAnswer.value.charAt(currentIndex.value);
+      currentIndex.value++;
+    } else {
+      clearInterval(intervalId);
+      blinking.value = false; // 将blinking标记为false，停止闪烁
+    }
+  }, typingSpeed.value);
+};
+// 关闭AI弹窗，同时清空相应数据
+const closeAIDialog = () => {
+  question.value = '';
+  showAIDialog.value = false;
+  currentAnswer.value = '';
+  randomAnswer.value = '';
 };
 
 // 复制文本
@@ -198,6 +261,65 @@ const showSuccessAlert = (text: string) => {
     success_alert.value = false;
     success_text.value = '';
   }, 1000);
+};
+
+// 文稿词句替换
+const createWordReplacement = () => {
+  axios({
+    method: 'post',
+    url: '/api/creation/word',
+    data: {
+      question: editorContent.value,
+    },
+  })
+    .then((resp: AIRespItem) => {
+      // TODO: 传给list
+      console.log(resp);
+    })
+    .catch((error) => {
+      randomAnswer.value = '网络问题，无法获取答案，请重新尝试！';
+      console.error('网络问题:', error);
+    });
+};
+
+// 别字纠错
+const createTypoCorrection = () => {
+  axios({
+    method: 'post',
+    url: '/api/creation/typo',
+    data: {
+      question: question.value,
+    },
+  })
+    .then((resp: AIRespItem) => {
+      randomAnswer.value = resp.data.result;
+      typeWriter();
+      console.log(resp);
+    })
+    .catch((error) => {
+      randomAnswer.value = '网络问题，无法获取答案，请重新尝试！';
+      console.error('网络问题:', error);
+    });
+};
+
+// 文章标题自动生成
+const createAITitle = () => {
+  // axios({
+  //   method: 'post',
+  //   url: '/api/creation/title',
+  //   data: {
+  //     question: question.value,
+  //   },
+  // })
+  //   .then((resp: AIRespItem) => {
+  //     randomAnswer.value = resp.data.result;
+  //     typeWriter();
+  //     console.log(resp);
+  //   })
+  //   .catch((error) => {
+  //     randomAnswer.value = '网络问题，无法获取答案，请重新尝试！';
+  //     console.error('网络问题:', error);
+  //   });
 };
 
 // 用于创建新的文稿
@@ -245,6 +367,9 @@ const saveFile = () => {
       });
   }
 };
+
+// 文稿润色功能
+const optimizedList = ref<any[]>([]);
 </script>
 <style lang="scss" module>
 .hot-news {
@@ -266,6 +391,12 @@ const saveFile = () => {
 .title-text {
   font-size: 28px;
   font-weight: bold;
+  text-align: center;
+  color: #333;
+  z-index: 1;
+}
+.title-subtext {
+  font-size: 14px;
   text-align: center;
   color: #333;
   z-index: 1;
@@ -298,5 +429,38 @@ const saveFile = () => {
   // transform: translateX(-50%);
   top: 40px;
   z-index: 10000;
+}
+
+.btn-container {
+  background-color: #f5f5f5 !important;
+}
+
+.btn-subcontainer {
+  display: flex;
+  justify-content: space-around;
+}
+
+.empty-text {
+  font-size: 16px;
+  padding: 16px;
+}
+
+.answer {
+  font-family: monospace;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.blinking:after {
+  content: '|';
+  display: inline-block;
+  margin-left: 5px;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
 }
 </style>
