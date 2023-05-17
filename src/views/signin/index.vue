@@ -75,11 +75,34 @@
 
 <script lang="ts" setup>
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import type { signinRespItem } from '../../types/signin';
 
 const router = useRouter();
+const route = useRoute();
+
+const controlAlert = ref(false);
+const controlText = ref('');
+const controlType = ref();
+const showAlertTimeOut = (text: string, type = 'success', delay?: number) => {
+  controlType.value = type;
+  controlText.value = text;
+  controlAlert.value = true;
+  setTimeout(() => {
+    controlAlert.value = false;
+    controlText.value = '';
+    controlType.value = '';
+  }, delay || 1000);
+};
+
+// token失效提示框
+const hasToken = () => {
+  if (route.query?.expired) {
+    showAlertTimeOut('Token expired', 'error', 2000);
+  }
+};
+hasToken();
 
 const username = ref(localStorage.getItem('user_name') || '');
 const password = ref('');
@@ -121,20 +144,6 @@ const signin = () => {
   } else {
     showAlertTimeOut('Please enter the correct user password', 'warning');
   }
-};
-
-const controlAlert = ref(false);
-const controlText = ref('');
-const controlType = ref();
-const showAlertTimeOut = (text: string, type = 'success') => {
-  controlType.value = type;
-  controlText.value = text;
-  controlAlert.value = true;
-  setTimeout(() => {
-    controlAlert.value = false;
-    controlText.value = '';
-    controlType.value = '';
-  }, 1000);
 };
 </script>
 

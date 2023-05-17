@@ -11,10 +11,29 @@
   ></v-alert>
   <v-app-bar :elevation="2">
     <template #prepend>
-      <v-app-bar-nav-icon></v-app-bar-nav-icon>
+      <v-menu location="bottom">
+        <template v-slot:activator="{ props }">
+          <v-app-bar-nav-icon v-bind="props"></v-app-bar-nav-icon>
+        </template>
+
+        <v-list>
+          <v-list-item v-for="(item, index) in menus" :key="index" :value="index" @click="item.clickFunc">
+            <v-list-item-title>{{ item.title }}</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-menu>
     </template>
-    <!-- TODO: 需要修改成文件名称，若不存在，则直接显示untitled -->
-    <v-app-bar-title>Creation</v-app-bar-title>
+    <v-app-bar-title>{{ newFileName || 'untitled' }}</v-app-bar-title>
+    <div :class="$style['tag-container']">
+      <v-card
+        v-for="(item, index) in fileDetail?.tags"
+        :key="index"
+        color="secondary"
+        class="pa-1"
+        :class="index > 0 && 'ml-6'"
+        >{{ item.tag_name }}<span :class="$style['delete-tag']" @click="confirmDeleteTag(item.tag_id)">x</span></v-card
+      >
+    </div>
     <v-spacer></v-spacer>
 
     <v-responsive max-width="156">
@@ -24,13 +43,6 @@
         </template>
         保存
       </v-btn>
-      <!-- <v-text-field
-        bg-color="grey-lighten-2"
-        class="rounded-pill overflow-hidden"
-        density="compact"
-        hide-details
-        variant="solo"
-      ></v-text-field> -->
     </v-responsive>
   </v-app-bar>
   <v-navigation-drawer width="300">
@@ -61,7 +73,6 @@
         api-key="ej8vo2s2u5a6b5g04917ajn437b37nxf5olm4yemnyz9gcad"
         :init="{
           skin: 'snow',
-          // content_css: 'dark',
           branding: false,
           height: 580,
           plugins: 'lists link image table code help wordcount',
@@ -71,8 +82,8 @@
         <template v-slot:title>文稿润色功能</template>
         <template v-slot:text>
           <div :class="$style['btn-subcontainer']">
-            <v-btn color="primary" @click="createWordReplacement">词句替换</v-btn>
-            <v-btn color="secondary" @click="createTypoCorrection">别字纠错</v-btn>
+            <v-btn color="primary" @click="createWordReplacement">词句润色</v-btn>
+            <v-btn color="secondary" @click="createTagClassify">标签分类</v-btn>
             <v-btn color="purple" @click="createAITitle">标题生成</v-btn>
           </div>
         </template>
@@ -80,22 +91,62 @@
     </div>
   </v-main>
 
-  <v-navigation-drawer location="right">
+  <v-navigation-drawer location="right" width="300">
     <v-sheet color="grey-lighten-3" :class="$style['hot-news']" width="100%" height="128">
       <div :class="$style.title">
         <span :class="$style['title-text']">文稿润色</span>
-        <span :class="$style['title-subtext']">词句替换，别字纠错等</span>
+        <span :class="$style['title-subtext']">词句替换，标签分类，标题生成等</span>
         <span :class="$style.circle"></span>
       </div>
     </v-sheet>
-    <v-list v-if="optimizedList.length">
-      <v-list-item v-for="item in optimizedList" :key="item.title" :title="item.title" link></v-list-item>
+    <!-- 文章标题 -->
+    <v-list v-if="AITitleList.length">
+      <v-list-item
+        v-for="(item, index) in AITitleList"
+        :key="item.title"
+        :title="item.title"
+        link
+        @click="showAITitleDeatils(index)"
+      ></v-list-item>
     </v-list>
-    <div v-else :class="$style['empty-text']">优化内容都会显示在此哦～</div>
+    <!-- 词句润色 -->
+    <v-list v-else-if="AIWordList.length">
+      <v-list-item
+        class="d-flex flex-row justify-center align-center"
+        v-for="(item, index) in AIWordList"
+        :key="index"
+        link
+      >
+        <div>
+          <span :class="$style['edit_before']">{{ item.before }}</span>
+          <span>{{ ' ➡ ' }}</span>
+          <span :class="$style['edit_after']">{{ item.after }}</span>
+        </div>
+      </v-list-item>
+    </v-list>
+    <!-- 文章标签 -->
+    <v-list v-else-if="AIClassifyList.length">
+      <v-list-item
+        class="d-flex flex-row justify-center align-center"
+        v-for="(item, index) in AIClassifyList"
+        :key="index"
+        link
+        @click="associateTag(item.title)"
+      >
+        <v-card class="pa-1" color="secondary">{{ item.title }}</v-card>
+      </v-list-item>
+    </v-list>
+    <div v-else-if="showLoading" :class="$style['loader-container']">
+      <v-icon :class="$style.loader" :size="48">mdi-loading</v-icon>
+    </div>
+    <div v-else :class="$style['loader-container']">
+      <div :class="$style['empty-text']">优化内容都会显示在此哦～</div>
+    </div>
   </v-navigation-drawer>
 
   <v-footer app height="72">
     <v-text-field
+      ref=""
       v-model:model-value="question"
       bg-color="grey-lighten-1"
       class="rounded-pill overflow-hidden"
@@ -121,21 +172,6 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
-  <!-- 创建新文件dialog -->
-  <v-dialog v-model="showCreateFileDialog" width="450">
-    <v-card>
-      <v-card-title>
-        <span class="headline">Create new file</span>
-      </v-card-title>
-      <v-card-text>
-        <v-text-field v-model="newFileName" label="File name"></v-text-field>
-      </v-card-text>
-      <v-card-actions>
-        <v-btn color="primary" @click="createFile">创建</v-btn>
-        <v-btn color="secondary" @click="showCreateFileDialog = false">取消</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
   <!-- AI提问回答dialog -->
   <v-dialog v-model="showAIDialog" width="450">
     <v-card>
@@ -153,18 +189,162 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
+  <!-- 文章润色列表Item Dialog -->
+  <v-dialog v-model="showAITitleDialog" width="450">
+    <v-card>
+      <v-card-title>
+        <span class="headline">文章标题</span>
+      </v-card-title>
+      <v-card-text>
+        <span>{{ optimizedTitle }}</span>
+      </v-card-text>
+      <v-card-actions>
+        <v-btn color="primary" @click="copyToClipboard(optimizedTitle)">复制标题</v-btn>
+        <v-btn color="secondary" @click="showAITitleDialog = false">取消</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+  <!-- 创建新文件dialog -->
+  <v-dialog v-model="showCreateFileDialog" width="450">
+    <v-card>
+      <v-card-title>
+        <span class="headline">创建新文件</span>
+      </v-card-title>
+      <v-card-text>
+        <v-text-field v-model="newFileName" label="File name"></v-text-field>
+      </v-card-text>
+      <v-card-actions>
+        <v-btn color="primary" @click="createFile">创建</v-btn>
+        <v-btn color="secondary" @click="showCreateFileDialog = false">取消</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+  <!-- 重命名dialog -->
+  <v-dialog v-model="showRenameFileDialog" width="450">
+    <v-card>
+      <v-card-title>
+        <span class="headline">重命名文件</span>
+      </v-card-title>
+      <v-card-text>
+        <v-text-field v-model="newFileName" label="File name"></v-text-field>
+      </v-card-text>
+      <v-card-actions>
+        <v-btn color="primary" @click="renameFile">重命名</v-btn>
+        <v-btn color="secondary" @click="showRenameFileDialog = false">取消</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+  <!-- 删除文件dialog -->
+  <v-dialog v-model="showDeleteFileDialog" width="450">
+    <v-card>
+      <v-card-title>
+        <span class="headline">删除文件夹</span>
+      </v-card-title>
+      <v-card-text> 您确认要永久删除该文件吗？此操作将无法撤销！ </v-card-text>
+      <v-card-actions>
+        <v-btn color="error" @click="deleteFile">Delete</v-btn>
+        <v-btn color="secondary" @click="showDeleteFileDialog = false">Cancel</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+  <!-- 创建标签dialog -->
+  <v-dialog v-model="showCreateTagDialog" width="450">
+    <v-card>
+      <v-card-title>
+        <span class="headline">创建标签</span>
+      </v-card-title>
+      <v-card-text>
+        <v-text-field v-model="tagName" label="Tag name"></v-text-field>
+      </v-card-text>
+      <v-card-actions>
+        <v-btn color="primary" @click="createTag">Create</v-btn>
+        <v-btn color="secondary" @click="showCreateTagDialog = false">Cancel</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+  <!-- 创建标签dialog -->
+  <v-dialog v-model="showTagAssociateDialog" width="450">
+    <v-card>
+      <v-card-title>
+        <span class="headline">关联标签</span>
+      </v-card-title>
+      <v-card-text> {{ `您确认要将'${tagName}'标签关联到本文件吗？` }} </v-card-text>
+      <v-card-actions>
+        <v-btn color="primary" @click="createTag">Associate</v-btn>
+        <v-btn color="secondary" @click="showTagAssociateDialog = false">Cancel</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+  <!-- 删除文件dialog -->
+  <v-dialog v-model="showDeleteTagDialog" width="450">
+    <v-card>
+      <v-card-title>
+        <span class="headline">删除标签</span>
+      </v-card-title>
+      <v-card-text> 您确认要删除该标签吗？</v-card-text>
+      <v-card-actions>
+        <v-btn color="error" @click="deleteTag">Delete</v-btn>
+        <v-btn color="secondary" @click="showDeleteTagDialog = false">Cancel</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script lang="ts" setup>
 import { ref } from 'vue';
 import { useRoute } from 'vue-router';
 import Editor from '@tinymce/tinymce-vue';
-import { getHotList } from '@/api';
-import type { AIRespItem, NewsItem } from '@/types/creation';
-import axios from 'axios';
+import instance, { getHotList } from '@/api';
+import type { AIRespItem, NewsItem, AIRespListItem } from '@/types/creation';
+import type { AxiosResponse } from 'axios';
+import { computed } from 'vue';
+import type { FileDetailItem } from '@/types/manage';
 
 const route = useRoute();
-const isNew = !route.query;
+const isNew = computed(() => {
+  return !newFileName.value;
+});
+
+const showRenameFileDialog = ref(false);
+
+// 顶部菜单栏添加按钮菜单列表
+const menus = ref([
+  {
+    title: '重命名',
+    clickFunc: () => {
+      showRenameFileDialog.value = true;
+    },
+  },
+  {
+    title: '创建标签',
+    clickFunc: () => {
+      showCreateTagDialog.value = true;
+    },
+  },
+  {
+    title: '删除文件',
+    clickFunc: () => {
+      showDeleteFileDialog.value = true;
+    },
+  },
+]);
+
+const fileDetail = ref<FileDetailItem | null>(null);
+const getFileDetail = () => {
+  if (route.query?.file_id) {
+    instance({
+      method: 'get',
+      url: `/api/file/${route.query.file_id}`,
+    })
+      .then((resp: AxiosResponse<FileDetailItem>) => {
+        fileDetail.value = resp.data;
+      })
+      .catch((error) => {
+        console.error('网络问题:', error);
+      });
+  }
+};
+getFileDetail();
 
 const success_alert = ref(false);
 const success_text = ref('');
@@ -176,21 +356,36 @@ const hotDetailContent = ref('');
 // AI提问dialog
 const showAIDialog = ref(false);
 
-const editorContent = ref(route.query.content);
+// 文章润色dialog
+const optimizedTitle = ref('');
+const showAITitleDeatils = (index: number) => {
+  showAITitleDialog.value = true;
+  optimizedTitle.value = AITitleList.value[index].title;
+};
 
-const editorRef = ref();
+const editorContent = ref(route.query.content as string);
 
 const getHotSpots = async () => {
   const resp = await getHotList();
   hotList.value = resp;
 };
 // TODO: 要用的时候再打开！！！ 会有限额
-// getHotSpots();
+getHotSpots();
 
 const showHotspotDeatils = (index: number) => {
   showHotDetailDialog.value = true;
   hotDetailTitle.value = hotList.value[index].title;
   hotDetailContent.value = hotList.value[index].digest;
+};
+
+// AI请求时的loading状态
+const showLoading = ref(false);
+const showLoadingStatus = () => {
+  // 清空数据，展示loading状态
+  AITitleList.value = [];
+  AIClassifyList.value = [];
+  AIWordList.value = [];
+  showLoading.value = true;
 };
 
 // AI辅助搜索(问题)
@@ -204,14 +399,14 @@ const blinking = ref(true);
 const askAIQuestions = async () => {
   randomAnswer.value = '';
   showAIDialog.value = true;
-  axios({
+  instance({
     method: 'post',
     url: '/api/creation',
     data: {
       question: question.value,
     },
   })
-    .then((resp: AIRespItem) => {
+    .then((resp: AxiosResponse<AIRespItem>) => {
       randomAnswer.value = resp.data.result;
       typeWriter();
       console.log(resp);
@@ -250,8 +445,6 @@ const copyToClipboard = async (text: string) => {
     console.error('复制失败:', err);
   }
   showSuccessAlert('复制成功!');
-  showHotDetailDialog.value = false;
-  console.log(editorRef.value);
 };
 
 const showSuccessAlert = (text: string) => {
@@ -264,71 +457,98 @@ const showSuccessAlert = (text: string) => {
 };
 
 // 文稿词句替换
+const AIWordList = ref<any[]>([]);
 const createWordReplacement = () => {
-  axios({
+  const html = editorContent.value;
+  const tag = document.createElement('div');
+  tag.innerHTML = html;
+  const text = tag.textContent;
+  showLoadingStatus();
+  instance({
     method: 'post',
     url: '/api/creation/word',
     data: {
-      question: editorContent.value,
+      question: text,
     },
   })
-    .then((resp: AIRespItem) => {
-      // TODO: 传给list
-      console.log(resp);
+    .then((resp: AxiosResponse<AIRespListItem>) => {
+      AIWordList.value = resp.data.result || [];
+      showLoading.value = false;
     })
     .catch((error) => {
       randomAnswer.value = '网络问题，无法获取答案，请重新尝试！';
       console.error('网络问题:', error);
+      showLoading.value = false;
     });
 };
 
-// 别字纠错
-const createTypoCorrection = () => {
-  axios({
+// 文章标签
+const AIClassifyList = ref<any[]>([]);
+const createTagClassify = () => {
+  const html = editorContent.value;
+  const tag = document.createElement('div');
+  tag.innerHTML = html;
+  const text = tag.textContent;
+  showLoadingStatus();
+  instance({
     method: 'post',
-    url: '/api/creation/typo',
+    url: '/api/creation/classify',
     data: {
-      question: question.value,
+      question: text,
     },
   })
-    .then((resp: AIRespItem) => {
-      randomAnswer.value = resp.data.result;
-      typeWriter();
-      console.log(resp);
+    .then((resp: AxiosResponse<AIRespListItem>) => {
+      AIClassifyList.value = resp.data.result
+        ? resp.data.result.map((item) => {
+            return { title: item };
+          })
+        : [];
+      showLoading.value = false;
     })
     .catch((error) => {
-      randomAnswer.value = '网络问题，无法获取答案，请重新尝试！';
       console.error('网络问题:', error);
+      showLoading.value = false;
     });
 };
 
+const AITitleList = ref<any[]>([]);
+const showAITitleDialog = ref(false);
 // 文章标题自动生成
 const createAITitle = () => {
-  // axios({
-  //   method: 'post',
-  //   url: '/api/creation/title',
-  //   data: {
-  //     question: question.value,
-  //   },
-  // })
-  //   .then((resp: AIRespItem) => {
-  //     randomAnswer.value = resp.data.result;
-  //     typeWriter();
-  //     console.log(resp);
-  //   })
-  //   .catch((error) => {
-  //     randomAnswer.value = '网络问题，无法获取答案，请重新尝试！';
-  //     console.error('网络问题:', error);
-  //   });
+  const html = editorContent.value;
+  const tag = document.createElement('div');
+  tag.innerHTML = html;
+  const text = tag.textContent;
+  showLoadingStatus();
+  instance({
+    method: 'post',
+    url: '/api/creation/title',
+    data: {
+      question: text,
+    },
+  })
+    .then((resp: AxiosResponse<AIRespListItem>) => {
+      AITitleList.value = resp.data.result
+        ? resp.data.result.map((item) => {
+            return { title: item };
+          })
+        : [];
+      showLoading.value = false;
+    })
+    .catch((error) => {
+      randomAnswer.value = '网络问题，无法获取答案，请重新尝试！';
+      console.error('网络问题:', error);
+      showLoading.value = false;
+    });
 };
 
 // 用于创建新的文稿
 const showCreateFileDialog = ref(false);
-const newFileName = ref('');
+const newFileName = ref(route.query.file_name || '');
 
 const createFile = async () => {
   // 请求创建文件夹接口
-  axios({
+  instance({
     method: 'post',
     url: '/api/file',
     data: {
@@ -341,18 +561,18 @@ const createFile = async () => {
       showSuccessAlert('文稿创建成功！');
       // 重置dialog
       showCreateFileDialog.value = false;
-      newFileName.value = '';
     })
     .catch((error) => {
-      console.error('登陆失败:', error);
+      console.error('创建失败:', error);
     });
 };
 
+// 保存文件
 const saveFile = () => {
-  if (isNew) {
+  if (isNew.value) {
     showCreateFileDialog.value = true;
   } else {
-    axios({
+    instance({
       method: 'patch',
       url: `/api/file/${route.query.file_id}`,
       data: {
@@ -368,10 +588,101 @@ const saveFile = () => {
   }
 };
 
-// 文稿润色功能
-const optimizedList = ref<any[]>([]);
+// 重命名文件
+const renameFile = () => {
+  instance({
+    method: 'patch',
+    url: `/api/file/${route.query.file_id}`,
+    data: {
+      file_name: newFileName.value,
+    },
+  })
+    .then(() => {
+      showRenameFileDialog.value = false;
+      showSuccessAlert('修改成功！');
+    })
+    .catch((error) => {
+      console.error('修改失败:', error);
+    });
+};
+
+// 删除文件
+const showDeleteFileDialog = ref(false);
+const deleteFile = () => {
+  instance({
+    method: 'delete',
+    url: `/api/file/${route.query.file_id}`,
+  })
+    .then(() => {
+      showDeleteFileDialog.value = false;
+      showSuccessAlert('删除成功！');
+    })
+    .catch((error) => {
+      console.error('删除失败:', error);
+    });
+};
+
+// 创建标签
+const showCreateTagDialog = ref(false);
+const showTagAssociateDialog = ref(false);
+const tagName = ref('');
+const createTag = () => {
+  instance({
+    method: 'patch',
+    url: `/api/tag/${route.query.file_id}`,
+    data: {
+      tag_name: tagName.value,
+    },
+  })
+    .then(() => {
+      showCreateTagDialog.value = false;
+      showTagAssociateDialog.value = false;
+      tagName.value = '';
+      getFileDetail();
+      showSuccessAlert('标签创建成功！');
+    })
+    .catch((error) => {
+      console.error('删除失败:', error);
+    });
+};
+
+const associateTag = (name: string) => {
+  tagName.value = name;
+  showTagAssociateDialog.value = true;
+};
+
+const tag_id = ref<number | null>(null);
+const showDeleteTagDialog = ref(false);
+const deleteTag = () => {
+  instance({
+    method: 'delete',
+    url: `/api/tag/${tag_id.value}`,
+  })
+    .then(() => {
+      showDeleteTagDialog.value = false;
+      getFileDetail();
+      showSuccessAlert('删除成功！');
+    })
+    .catch((error) => {
+      console.error('删除失败:', error);
+    });
+};
+const confirmDeleteTag = (id: number) => {
+  console.log(id);
+  tag_id.value = id;
+  showDeleteTagDialog.value = true;
+};
 </script>
 <style lang="scss" module>
+.tag-container {
+  display: flex;
+
+  .delete-tag {
+    margin: 0 8px;
+    cursor: pointer;
+  }
+}
+
 .hot-news {
   background-color: #f5f5f5;
   display: flex;
@@ -443,6 +754,7 @@ const optimizedList = ref<any[]>([]);
 .empty-text {
   font-size: 16px;
   padding: 16px;
+  text-align: center;
 }
 
 .answer {
@@ -462,5 +774,36 @@ const optimizedList = ref<any[]>([]);
   50% {
     opacity: 0;
   }
+}
+
+.edit_before {
+  background-color: yellow;
+}
+
+.edit_after {
+  background-color: green;
+}
+
+.loader-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: calc(100% - 128px);
+  width: 100%;
+}
+
+.loader {
+  // width: 20px; /* 设置圆环的宽度 */
+  // height: 20px; /* 设置圆环的高度 */
+  animation: spin 1s linear infinite; /* 设置动画，名称为"spin"，持续时间为2秒，线性运动，无限循环 */
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  } /* 起始状态，圆环没有旋转 */
+  100% {
+    transform: rotate(360deg);
+  } /* 最终状态，圆环旋转一周，360度 */
 }
 </style>

@@ -68,6 +68,7 @@
               :time="formatDateToZHformat(String(file.last_accessed_at))"
               :is_favor="file.is_favorite"
               :content="file.content"
+              :tags="file.tags"
               @click="openFile(file)"
               @like="getFileList()"
             ></FileCard>
@@ -95,17 +96,17 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
-import axios, { type AxiosResponse } from 'axios';
+import { useRouter } from 'vue-router';
+import type { AxiosResponse } from 'axios';
 
 import { formatDateToZHformat, debounce } from '@/utils/index';
 import type { FileDetailItem } from '@/types/manage';
 
 import CreateCard from '../manage/components/CreateCard/index.vue';
 import FileCard from '../manage/components/FileCard/index.vue';
+import instance from '@/api';
 
 const router = useRouter();
-const route = useRoute();
 //是否展示文件dialog
 const showFileDialog = ref(false);
 const fileName = ref('');
@@ -125,7 +126,7 @@ const addMenus = ref([
 
 const createFile = async () => {
   // 请求创建文件夹接口
-  axios({
+  instance({
     method: 'post',
     url: '/api/file',
     data: {
@@ -159,7 +160,7 @@ const openFile = (file: FileDetailItem) => {
 // 根据时间排序，获取文件列表请求
 const getFileList = async () => {
   // 请求获取文件夹列表接口
-  axios({
+  instance({
     method: 'get',
     url: `/api/file/all`,
   })
@@ -190,7 +191,7 @@ const searchValue = ref('');
 // 获取文件列表请求
 const getFileListByName = async () => {
   if (searchValue.value) {
-    axios({
+    instance({
       method: 'get',
       url: `/api/file/search/${searchValue.value}`,
     })

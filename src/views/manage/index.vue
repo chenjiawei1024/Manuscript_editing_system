@@ -68,16 +68,19 @@
           icon="mdi-folder-account"
           title="创建共享文件"
           subtitle="支持文件共享~"
+          @click="showShareFileDialog = true"
         ></CreateCard>
       </v-container>
       <!-- 文件/文件夹列表 -->
-      <v-container>
+      <div :class="$style['card-container']">
         <v-row>
           <v-col v-for="folder in folderList" xxl="1" lg="2" cols="2" md="3" sm="3" xs="6" :key="folder.folder_id">
             <FolderCard
+              :folder_id="folder.folder_id"
               :title="folder.folder_name"
               :time="formatDateToZHformat(String(folder.last_accessed_at))"
               @click="openFolder(folder)"
+              @refresh="getFolderList(route.query?.f ? Number(route.query.f) : -1)"
             ></FolderCard>
           </v-col>
         </v-row>
@@ -89,12 +92,13 @@
               :time="formatDateToZHformat(String(file.last_accessed_at))"
               :is_favor="file.is_favorite"
               :content="file.content"
+              :tags="file.tags"
               @click="openFile(file)"
               @like="getFileList(route.query?.f ? Number(route.query.f) : -1)"
             ></FileCard>
           </v-col>
         </v-row>
-      </v-container>
+      </div>
       <!-- 创建新文件夹dialog -->
       <v-dialog v-model="showFolderDialog" width="450">
         <v-card>
@@ -125,6 +129,22 @@
           </v-card-actions>
         </v-card>
       </v-dialog>
+      <!-- 创建新共享文件dialog -->
+      <v-dialog v-model="showShareFileDialog" width="450">
+        <v-card>
+          <v-card-title>
+            <span class="headline">Create share file</span>
+          </v-card-title>
+          <v-card-text>
+            <v-text-field v-model="shareFileName" label="File name"></v-text-field>
+            <v-text-field v-model="shareToUser" label="User name"></v-text-field>
+          </v-card-text>
+          <v-card-actions>
+            <v-btn color="primary" @click="createShareFile">Create</v-btn>
+            <v-btn color="secondary" @click="showShareFileDialog = false">Cancel</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </v-container>
   </div>
 </template>
@@ -132,7 +152,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router';
-import axios, { type AxiosResponse } from 'axios';
+import type { AxiosResponse } from 'axios';
 
 import { formatDateToZHformat, debounce } from '@/utils/index';
 import type { FileDetailItem, FolderDetailItem, breadcrumbItem } from '@/types/manage';
@@ -140,18 +160,17 @@ import type { FileDetailItem, FolderDetailItem, breadcrumbItem } from '@/types/m
 import CreateCard from './components/CreateCard/index.vue';
 import FolderCard from './components/FolderCard/index.vue';
 import FileCard from './components/FileCard/index.vue';
+import instance from '@/api';
 
 const router = useRouter();
 const route = useRoute();
-//是否展示文件夹dialog
+// 是否展示文件夹dialog
 const showFolderDialog = ref(false);
-//是否展示文件dialog
+// 是否展示文件dialog
 const showFileDialog = ref(false);
 // 创建文件夹dialog表单
 const folderName = ref('');
 const fileName = ref('');
-// 当前父文件夹id，用于创建文件/文件夹时使用
-// const pid = ref(-1);
 // folder显示列表
 const folderList = ref<FolderDetailItem[]>([]);
 // file显示列表
@@ -182,7 +201,7 @@ const addMenus = ref([
 
 const createFolder = async () => {
   // 请求创建文件夹接口
-  axios({
+  instance({
     method: 'post',
     url: '/api/folder',
     data: {
@@ -204,8 +223,8 @@ const createFolder = async () => {
 };
 
 const createFile = async () => {
-  // 请求创建文件夹接口
-  axios({
+  // 请求创建文件接口
+  instance({
     method: 'post',
     url: '/api/file',
     data: {
@@ -220,6 +239,35 @@ const createFile = async () => {
       // 重置dialog
       showFileDialog.value = false;
       fileName.value = '';
+    })
+    .catch((error) => {
+      console.error('登陆失败:', error);
+    });
+};
+
+// 是否展示共享文件dialog
+const showShareFileDialog = ref(false);
+const shareFileName = ref('');
+const shareToUser = ref('');
+const createShareFile = async () => {
+  // 请求创建文件夹接口
+  instance({
+    method: 'post',
+    url: '/api/sfile',
+    data: {
+      file_name: shareFileName.value,
+      receiver_name: shareToUser.value,
+      sharer_id: localStorage.getItem('user_id'),
+      parent: route.query?.f ? Number(route.query.f) : -1,
+    },
+  })
+    .then(() => {
+      showSuccessAlert('文稿创建成功！');
+      getFileList(route.query?.f ? Number(route.query.f) : -1);
+      // 重置dialog
+      showShareFileDialog.value = false;
+      shareFileName.value = '';
+      shareToUser.value = '';
     })
     .catch((error) => {
       console.error('登陆失败:', error);
@@ -253,7 +301,7 @@ const openFile = (file: FileDetailItem) => {
 // 获取文件夹列表请求
 const getFolderList = async (parentid?: number) => {
   // 请求获取文件夹列表接口
-  axios({
+  instance({
     method: 'get',
     url: `/api/folder/${parentid || -1}`,
   })
@@ -267,9 +315,13 @@ const getFolderList = async (parentid?: number) => {
 // 获取文件列表请求
 const getFileList = async (parentid?: number) => {
   // 请求获取文件夹列表接口
-  axios({
+  instance({
     method: 'get',
-    url: `/api/file/${parentid || -1}`,
+    url: '/api/file',
+    params: {
+      parent_id: parentid || -1,
+      owner: localStorage.getItem('user_id'),
+    },
   })
     .then((resp: AxiosResponse<FileDetailItem[]>) => {
       fileList.value = resp.data;
@@ -317,7 +369,7 @@ const searchValue = ref('');
 // 获取文件夹列表请求
 const getFolderListByName = async () => {
   if (searchValue.value) {
-    axios({
+    instance({
       method: 'get',
       url: `/api/folder/search/${searchValue.value}`,
     })
@@ -334,7 +386,7 @@ const getFolderListByName = async () => {
 // 获取文件列表请求
 const getFileListByName = async () => {
   if (searchValue.value) {
-    axios({
+    instance({
       method: 'get',
       url: `/api/file/search/${searchValue.value}`,
     })
@@ -356,6 +408,14 @@ const debouncedSearch = debounce(search, 1000);
 </script>
 
 <style lang="scss" module>
+.card-container {
+  overflow-y: scroll;
+
+  &::-webkit-scrollbar {
+    width: 0; /* 隐藏滚动条 */
+    background-color: transparent; /* 使滚动条透明 */
+  }
+}
 .item-hover:hover {
   background-color: rgb(247, 247, 247);
   cursor: pointer;

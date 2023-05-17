@@ -34,6 +34,11 @@ const router = createRouter({
           name: 'favorite',
           component: () => import('../views/favorite/index.vue'),
         },
+        {
+          path: '/share',
+          name: 'share',
+          component: () => import('../views/share/index.vue'),
+        },
       ],
     },
     {

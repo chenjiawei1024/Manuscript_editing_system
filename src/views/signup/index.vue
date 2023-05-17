@@ -1,5 +1,14 @@
 <template>
   <div class="login-container">
+    <v-alert
+      v-model:model-value="controlAlert"
+      class="alert"
+      density="compact"
+      position="fixed"
+      :type="controlType"
+      :text="controlText"
+      min-width="250"
+    ></v-alert>
     <div class="box">
       <div class="banner_high">
         <!-- <img src="../assets/images/logo.svg" alt="" /> -->
@@ -104,11 +113,28 @@ const signup = () => {
   })
     .then(() => {
       // 校验成功，跳转到指定路由
-      router.push('/index');
+      showAlertTimeOut('注册成功！');
+      setTimeout(() => {
+        router.push('/signin');
+      }, 1100);
     })
     .catch((error) => {
       console.error('登陆失败:', error);
     });
+};
+
+const controlAlert = ref(false);
+const controlText = ref('');
+const controlType = ref();
+const showAlertTimeOut = (text: string, type = 'success', delay?: number) => {
+  controlType.value = type;
+  controlText.value = text;
+  controlAlert.value = true;
+  setTimeout(() => {
+    controlAlert.value = false;
+    controlText.value = '';
+    controlType.value = '';
+  }, delay || 1000);
 };
 </script>
 

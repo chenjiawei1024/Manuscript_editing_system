@@ -18,6 +18,11 @@
         :elevation="isHovering ? 2 : 0"
       >
         <div :class="$style['file-container']">
+          <v-tooltip v-if="tags && tags.length" location="bottom" :text="tags[0].tag_name">
+            <template v-slot:activator="{ props }">
+              <v-icon v-if="tags && tags.length" v-bind="props" :class="$style.tag">mdi-tag-multiple</v-icon>
+            </template>
+          </v-tooltip>
           <div :class="$style['file-content']">
             <span v-if="isEmpty" :class="$style.word"> [空] </span>
             <span v-else :class="[$style.word, $style['text-container']]" v-html="content"></span>
@@ -39,7 +44,8 @@
   </div>
 </template>
 <script lang="ts" setup>
-import axios from 'axios';
+import instance from '@/api';
+import type { TagDetailItem } from '@/types/manage';
 import { computed } from 'vue';
 import { ref } from 'vue';
 
@@ -49,6 +55,7 @@ const props = defineProps<{
   time: String;
   is_favor: boolean;
   content: string;
+  tags?: Array<TagDetailItem>;
 }>();
 
 const emits = defineEmits<{
@@ -71,7 +78,7 @@ const showSuccessAlert = (text: string) => {
 };
 
 const emitLike = () => {
-  axios({
+  instance({
     method: 'patch',
     url: `/api/file/${props.file_id}/favor`,
   })
@@ -97,8 +104,15 @@ const emitLike = () => {
 .container {
   border: #e9e9e9 1px solid;
   .file-container {
+    position: relative;
     width: 100%;
     height: 148px;
+
+    .tag {
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
 
     .file-img {
       display: block;

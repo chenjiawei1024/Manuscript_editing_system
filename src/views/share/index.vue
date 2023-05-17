@@ -32,23 +32,23 @@
           v-model:model-value="searchValue"
           density="compact"
           prepend-inner-icon="mdi-magnify"
-          placeholder="在此搜索文件~"
+          placeholder="搜索文件、文件夹等"
           class="mt-6 w-50"
           @input="debouncedSearch"
         ></v-text-field>
 
         <template #append> <v-btn icon="mdi-dots-vertical"></v-btn> </template
       ></v-app-bar>
-      <div :class="$style.title">收藏</div>
+      <div :class="$style.title">共享文件</div>
       <v-divider class="mb-2"></v-divider>
       <!-- 按钮组 -->
       <v-container class="d-flex flex-row">
         <CreateCard
-          color="#8fcbff"
-          icon="mdi-file"
-          title="创建文件"
-          subtitle="开始进行文稿创作~"
-          @click="showFileDialog = true"
+          color="#f24e1e"
+          icon="mdi-folder-account"
+          title="创建共享文件"
+          subtitle="支持文件共享~"
+          @click="showShareFileDialog = true"
         ></CreateCard>
       </v-container>
       <!-- 文件/文件夹列表 -->
@@ -83,13 +83,29 @@
           </v-card-actions>
         </v-card>
       </v-dialog>
+      <!-- 创建新共享文件dialog -->
+      <v-dialog v-model="showShareFileDialog" width="450">
+        <v-card>
+          <v-card-title>
+            <span class="headline">Create share file</span>
+          </v-card-title>
+          <v-card-text>
+            <v-text-field v-model="shareFileName" label="File name"></v-text-field>
+            <v-text-field v-model="shareToUser" label="User name"></v-text-field>
+          </v-card-text>
+          <v-card-actions>
+            <v-btn color="primary" @click="createShareFile">Create</v-btn>
+            <v-btn color="secondary" @click="showShareFileDialog = false">Cancel</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </v-container>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import type { AxiosResponse } from 'axios';
 
 import { formatDateToZHformat, debounce } from '@/utils/index';
@@ -100,10 +116,11 @@ import FileCard from '../manage/components/FileCard/index.vue';
 import instance from '@/api';
 
 const router = useRouter();
+const route = useRoute();
 //是否展示文件dialog
 const showFileDialog = ref(false);
+// 创建文件dialog表单
 const fileName = ref('');
-// 当前父文件夹id，用于创建文件/文件夹时使用
 // file显示列表
 const fileList = ref<FileDetailItem[]>([]);
 
@@ -116,7 +133,6 @@ const addMenus = ref([
     },
   },
 ]);
-
 const createFile = async () => {
   // 请求创建文件夹接口
   instance({
@@ -125,6 +141,7 @@ const createFile = async () => {
     data: {
       file_name: fileName.value,
       owner: localStorage.getItem('user_id'),
+      parent: route.query?.f,
     },
   })
     .then(() => {
@@ -149,13 +166,12 @@ const openFile = (file: FileDetailItem) => {
     },
   });
 };
-
-// 根据时间排序，获取文件列表请求
+// 获取文件列表请求
 const getFileList = async () => {
   // 请求获取文件夹列表接口
   instance({
     method: 'get',
-    url: `/api/file/favor`,
+    url: `/api/sfile/${localStorage.getItem('user_id')}`,
   })
     .then((resp: AxiosResponse<FileDetailItem[]>) => {
       fileList.value = resp.data;
@@ -202,6 +218,35 @@ const search = () => {
   getFileListByName();
 };
 const debouncedSearch = debounce(search, 1000);
+
+// 是否展示共享文件dialog
+const showShareFileDialog = ref(false);
+const shareFileName = ref('');
+const shareToUser = ref('');
+const createShareFile = async () => {
+  // 请求创建文件夹接口
+  instance({
+    method: 'post',
+    url: '/api/sfile',
+    data: {
+      file_name: shareFileName.value,
+      receiver_name: shareToUser.value,
+      sharer_id: localStorage.getItem('user_id'),
+      parent: route.query?.f ? Number(route.query.f) : -1,
+    },
+  })
+    .then(() => {
+      showSuccessAlert('文稿创建成功！');
+      getFileList();
+      // 重置dialog
+      showShareFileDialog.value = false;
+      shareFileName.value = '';
+      shareToUser.value = '';
+    })
+    .catch((error) => {
+      console.error('登陆失败:', error);
+    });
+};
 </script>
 
 <style lang="scss" module>
@@ -216,10 +261,6 @@ const debouncedSearch = debounce(search, 1000);
 .item-hover:hover {
   background-color: rgb(247, 247, 247);
   cursor: pointer;
-}
-
-.button-space {
-  margin-left: 24px !important;
 }
 
 .alert {

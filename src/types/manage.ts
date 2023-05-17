@@ -16,6 +16,12 @@ export interface FileDetailItem {
   last_accessed_at: Date;
   is_favorite: boolean;
   content: string;
+  tags: TagDetailItem[];
+}
+
+export interface TagDetailItem {
+  tag_id: number;
+  tag_name: string;
 }
 
 export interface breadcrumbItem {

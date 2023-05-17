@@ -1,5 +1,3 @@
-import type { AxiosResponse } from 'axios';
-
 export interface HotSpotItem {
   data: {
     code?: number;
@@ -14,6 +12,10 @@ export interface NewsItem {
   digest: string;
 }
 
-export type AIRespItem = AxiosResponse<{
+export interface AIRespItem {
   result: string;
-}>;
+}
+
+export interface AIRespListItem {
+  result: string[];
+}
