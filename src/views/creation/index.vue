@@ -288,6 +288,22 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
+  <!-- 创建新共享文件dialog -->
+  <v-dialog v-model="showShareFileDialog" width="450">
+    <v-card>
+      <v-card-title>
+        <span class="headline">Share file</span>
+      </v-card-title>
+      <v-card-text>
+        <v-text-field v-model="shareFileName" label="File name"></v-text-field>
+        <v-text-field v-model="shareToUser" label="User name"></v-text-field>
+      </v-card-text>
+      <v-card-actions>
+        <v-btn color="primary" @click="createShareFile">Share</v-btn>
+        <v-btn color="secondary" @click="showShareFileDialog = false">Cancel</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script lang="ts" setup>
@@ -299,10 +315,52 @@ import type { AIRespItem, NewsItem, AIRespListItem } from '@/types/creation';
 import type { AxiosResponse } from 'axios';
 import { computed } from 'vue';
 import type { FileDetailItem } from '@/types/manage';
+import { onBeforeUnmount } from 'vue';
 
 const route = useRoute();
 const isNew = computed(() => {
   return !newFileName.value;
+});
+
+const file_id = ref();
+
+// 已有用户在编辑，锁定该文件
+const lockFile = () => {
+  file_id.value = route.query.file_id;
+  if (route.query.file_id) {
+    instance({
+      method: 'patch',
+      url: `/api/file/lock/${route.query.file_id}`,
+    })
+      .then(() => {
+        console.log('锁定成功!');
+      })
+      .catch((error) => {
+        console.error('网络问题:', error);
+      });
+    window.addEventListener('beforeunload', handleBeforeUnload);
+  }
+};
+const handleBeforeUnload = () => {
+  if (file_id.value) {
+    instance({
+      method: 'patch',
+      url: `/api/file/unlock/${file_id.value}`,
+    })
+      .then(() => {
+        console.log('解锁成功!');
+      })
+      .catch((error) => {
+        console.error('网络问题:', error);
+      });
+  }
+};
+lockFile();
+
+// 离开页面，解锁该文件
+onBeforeUnmount(() => {
+  handleBeforeUnload();
+  window.removeEventListener('beforeunload', handleBeforeUnload);
 });
 
 const showRenameFileDialog = ref(false);
@@ -322,6 +380,12 @@ const menus = ref([
     },
   },
   {
+    title: '分享文件',
+    clickFunc: () => {
+      showShareFileDialog.value = true;
+    },
+  },
+  {
     title: '删除文件',
     clickFunc: () => {
       showDeleteFileDialog.value = true;
@@ -338,6 +402,7 @@ const getFileDetail = () => {
     })
       .then((resp: AxiosResponse<FileDetailItem>) => {
         fileDetail.value = resp.data;
+        shareFileName.value = resp.data.file_name;
       })
       .catch((error) => {
         console.error('网络问题:', error);
@@ -370,7 +435,7 @@ const getHotSpots = async () => {
   hotList.value = resp;
 };
 // TODO: 要用的时候再打开！！！ 会有限额
-getHotSpots();
+// getHotSpots();
 
 const showHotspotDeatils = (index: number) => {
   showHotDetailDialog.value = true;
@@ -409,7 +474,6 @@ const askAIQuestions = async () => {
     .then((resp: AxiosResponse<AIRespItem>) => {
       randomAnswer.value = resp.data.result;
       typeWriter();
-      console.log(resp);
     })
     .catch((error) => {
       randomAnswer.value = '网络问题，无法获取答案，请重新尝试！';
@@ -440,7 +504,6 @@ const closeAIDialog = () => {
 const copyToClipboard = async (text: string) => {
   try {
     await navigator.clipboard.writeText(text);
-    console.log('复制成功');
   } catch (err) {
     console.error('复制失败:', err);
   }
@@ -668,9 +731,36 @@ const deleteTag = () => {
     });
 };
 const confirmDeleteTag = (id: number) => {
-  console.log(id);
   tag_id.value = id;
   showDeleteTagDialog.value = true;
+};
+
+// 是否展示共享文件dialog
+const showShareFileDialog = ref(false);
+const shareFileName = ref('');
+const shareToUser = ref('');
+const createShareFile = async () => {
+  // 请求创建文件夹接口
+  instance({
+    method: 'post',
+    url: '/api/sfile',
+    data: {
+      file_name: shareFileName.value,
+      receiver_name: shareToUser.value,
+      sharer_id: localStorage.getItem('user_id'),
+      parent: route.query?.f ? Number(route.query.f) : -1,
+    },
+  })
+    .then(() => {
+      showSuccessAlert('文稿共享成功！');
+      // 重置dialog
+      showShareFileDialog.value = false;
+      shareFileName.value = '';
+      shareToUser.value = '';
+    })
+    .catch((error) => {
+      console.error('登陆失败:', error);
+    });
 };
 </script>
 <style lang="scss" module>

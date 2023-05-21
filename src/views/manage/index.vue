@@ -7,7 +7,7 @@
         :class="$style.alert"
         density="compact"
         position="fixed"
-        type="success"
+        :type="alert_type || 'success'"
         :text="success_text"
         min-width="250"
       ></v-alert>
@@ -79,6 +79,8 @@
               :folder_id="folder.folder_id"
               :title="folder.folder_name"
               :time="formatDateToZHformat(String(folder.last_accessed_at))"
+              :file_count="folder.child_file_count"
+              :folder_count="folder.child_folder_count"
               @click="openFolder(folder)"
               @refresh="getFolderList(route.query?.f ? Number(route.query.f) : -1)"
             ></FolderCard>
@@ -92,6 +94,7 @@
               :time="formatDateToZHformat(String(file.last_accessed_at))"
               :is_favor="file.is_favorite"
               :content="file.content"
+              :is_shared="file.is_shared"
               :tags="file.tags"
               @click="openFile(file)"
               @like="getFileList(route.query?.f ? Number(route.query.f) : -1)"
@@ -262,7 +265,7 @@ const createShareFile = async () => {
     },
   })
     .then(() => {
-      showSuccessAlert('文稿创建成功！');
+      showSuccessAlert('共享文稿创建成功！');
       getFileList(route.query?.f ? Number(route.query.f) : -1);
       // 重置dialog
       showShareFileDialog.value = false;
@@ -275,27 +278,38 @@ const createShareFile = async () => {
 };
 
 const openFolder = (folder: FolderDetailItem) => {
-  console.log(route.matched);
   breadcrumbs.value.push({
     title: folder.folder_name,
     href: `/manage?f=${folder.folder_id}`,
     to: { path: '/manage', query: { f: folder.folder_id } },
   });
   router.push({ path: '/manage', query: { f: folder.folder_id } });
-  console.log(breadcrumbs.value);
   getFolderList(folder.folder_id);
   getFileList(folder.folder_id);
 };
 
-const openFile = (file: FileDetailItem) => {
-  router.push({
-    path: '/creation',
-    query: {
-      file_id: file.file_id,
-      file_name: file.file_name,
-      content: file.content,
-    },
-  });
+const openFile = async (file: FileDetailItem) => {
+  instance({
+    method: 'get',
+    url: `/api/file/lock/${file.file_id}`,
+  })
+    .then((resp: AxiosResponse<boolean>) => {
+      if (!resp.data) {
+        router.push({
+          path: '/creation',
+          query: {
+            file_id: file.file_id,
+            file_name: file.file_name,
+            content: file.content,
+          },
+        });
+      } else {
+        showSuccessAlert('oops! the file is locked!', 'error');
+      }
+    })
+    .catch((error) => {
+      console.error('获取文件状态:', error);
+    });
 };
 
 // 获取文件夹列表请求
@@ -335,13 +349,16 @@ getFileList();
 
 const success_text = ref('');
 const success_alert = ref(false);
+const alert_type = ref<'error' | 'success' | 'warning' | 'info' | undefined>();
 /** success弹框显示隐藏 */
-const showSuccessAlert = (text: string) => {
+const showSuccessAlert = (text: string, type?: 'error' | 'success' | 'warning' | 'info') => {
   success_text.value = text;
   success_alert.value = true;
+  alert_type.value = type;
   setTimeout(() => {
     success_alert.value = false;
     success_text.value = '';
+    alert_type.value = undefined;
   }, 1000);
 };
 
@@ -349,7 +366,6 @@ const showSuccessAlert = (text: string) => {
 onBeforeRouteUpdate(async (to, from, next) => {
   // 若存在index，则为回退
   const index = breadcrumbs.value.findIndex((b) => b.href === to.fullPath);
-  console.log(index);
   if (index !== -1) {
     breadcrumbs.value.splice(index + 1);
   }

@@ -47,13 +47,10 @@ const getUserInfo = async () => {
   })
     .then((resp: AxiosResponse<UserInfoType>) => {
       userInfo.value = resp.data;
-      console.log(resp);
     })
     .catch((error) => {
       console.error('获取用户信息失败:', error);
     });
 };
 getUserInfo();
-// import { RouterLink, RouterView } from 'vue-router';
-// import HelloWorld from './components/HelloWorld.vue';
 </script>

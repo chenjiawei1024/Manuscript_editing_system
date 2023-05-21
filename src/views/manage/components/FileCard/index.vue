@@ -23,6 +23,7 @@
               <v-icon v-if="tags && tags.length" v-bind="props" :class="$style.tag">mdi-tag-multiple</v-icon>
             </template>
           </v-tooltip>
+          <img v-if="is_shared" :class="$style['share_tag']" src="./imgs/tag.svg" />
           <div :class="$style['file-content']">
             <span v-if="isEmpty" :class="$style.word"> [空] </span>
             <span v-else :class="[$style.word, $style['text-container']]" v-html="content"></span>
@@ -37,7 +38,7 @@
               }}</v-icon>
             </v-hover>
           </div>
-          <dic :class="$style.time">{{ time }}</dic>
+          <div :class="$style.time">{{ time }}</div>
         </div>
       </v-card>
     </v-hover>
@@ -55,6 +56,7 @@ const props = defineProps<{
   time: String;
   is_favor: boolean;
   content: string;
+  is_shared?: string;
   tags?: Array<TagDetailItem>;
 }>();
 
@@ -112,6 +114,13 @@ const emitLike = () => {
       position: absolute;
       left: 0;
       top: 0;
+    }
+
+    .share_tag {
+      position: absolute;
+      width: 24px;
+      right: 14px;
+      top: 1px;
     }
 
     .file-img {

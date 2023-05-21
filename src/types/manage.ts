@@ -7,6 +7,8 @@ export interface FolderDetailItem {
   created_time: Date;
   last_accessed_at: Date;
   is_favorite: boolean;
+  child_folder_count: number;
+  child_file_count: number;
 }
 
 export interface FileDetailItem {
@@ -16,6 +18,7 @@ export interface FileDetailItem {
   last_accessed_at: Date;
   is_favorite: boolean;
   content: string;
+  is_shared?: string;
   tags: TagDetailItem[];
 }
 

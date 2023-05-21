@@ -20,7 +20,16 @@
         <div :class="$style['folder-container']">
           <img :class="$style['folder-img']" src="./imgs/folder.svg" />
           <div :class="$style['folder-content']">
-            <span :class="$style.word">{{ isEmpty && '[空]' }}</span>
+            <span v-if="isEmpty" :class="$style.word">{{ '[空]' }}</span>
+            <div v-else :class="$style['detail-container']">
+              <div :class="$style['left-block']"></div>
+              <div :class="$style['right-block']">
+                <div :class="$style['top-block']">
+                  <v-icon size="24">mdi-folder-outline</v-icon>
+                </div>
+                <span :class="$style['bottom-word']">{{ `+${(file_count || 0) + (folder_count || 0)}` }}</span>
+              </div>
+            </div>
           </div>
         </div>
         <div :class="$style['content-container']">
@@ -79,15 +88,21 @@
 </template>
 <script lang="ts" setup>
 import axios from 'axios';
+import { computed } from 'vue';
 import { ref } from 'vue';
 
 const props = defineProps<{
   folder_id: number;
   title: String;
   time: String;
+  file_count?: number;
+  folder_count?: number;
 }>();
 
-const isEmpty = ref(true);
+// 是否展示空状态
+const isEmpty = computed(() => {
+  return !props.file_count && !props.folder_count;
+});
 const showDeleteDialog = ref(false);
 const showRenameDialog = ref(false);
 const emits = defineEmits(['refresh']);
@@ -183,6 +198,55 @@ const deleteFolder = () => {
 
     .word {
       color: rgba(32, 32, 32, 0.6);
+    }
+
+    .detail-container {
+      display: flex;
+      justify-content: space-between;
+      height: calc(100% - 15.5px);
+      width: 100%;
+      margin: 8px 7px;
+      .left-block {
+        height: 100%;
+        width: 65.2%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 4px;
+        overflow: hidden;
+        border: 1px solid #edeff2;
+        background: #fafafa;
+      }
+
+      .right-block {
+        width: 31.1%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        .top-block {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          background: #fafafa;
+          color: rgba(32, 32, 32, 0.6);
+          height: 47.5%;
+          font-size: 13px;
+          line-height: 20px;
+          border: 1px solid #edeff2;
+          border-radius: 4px;
+          overflow: hidden;
+        }
+
+        .bottom-word {
+          color: rgba(32, 32, 32, 0.6);
+          height: 47.5%;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          font-size: 13px;
+          line-height: 20px;
+        }
+      }
     }
   }
 }

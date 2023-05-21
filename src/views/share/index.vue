@@ -7,7 +7,7 @@
         :class="$style.alert"
         density="compact"
         position="fixed"
-        type="success"
+        :type="alert_type || 'success'"
         :text="success_text"
         min-width="250"
       ></v-alert>
@@ -157,14 +157,27 @@ const createFile = async () => {
 };
 
 const openFile = (file: FileDetailItem) => {
-  router.push({
-    path: '/creation',
-    query: {
-      file_id: file.file_id,
-      file_name: file.file_name,
-      content: file.content,
-    },
-  });
+  instance({
+    method: 'get',
+    url: `/api/file/lock/${file.file_id}`,
+  })
+    .then((resp: AxiosResponse<boolean>) => {
+      if (!resp.data) {
+        router.push({
+          path: '/creation',
+          query: {
+            file_id: file.file_id,
+            file_name: file.file_name,
+            content: file.content,
+          },
+        });
+      } else {
+        showSuccessAlert('oops! the file is locked!', 'error');
+      }
+    })
+    .catch((error) => {
+      console.error('获取文件状态:', error);
+    });
 };
 // 获取文件列表请求
 const getFileList = async () => {
@@ -184,13 +197,16 @@ getFileList();
 
 const success_text = ref('');
 const success_alert = ref(false);
+const alert_type = ref<'error' | 'success' | 'warning' | 'info' | undefined>();
 /** success弹框显示隐藏 */
-const showSuccessAlert = (text: string) => {
+const showSuccessAlert = (text: string, type?: 'error' | 'success' | 'warning' | 'info') => {
   success_text.value = text;
   success_alert.value = true;
+  alert_type.value = type;
   setTimeout(() => {
     success_alert.value = false;
     success_text.value = '';
+    alert_type.value = undefined;
   }, 1000);
 };
 

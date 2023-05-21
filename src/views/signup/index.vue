@@ -53,7 +53,13 @@
         <label for="name">密码</label>
         <div>
           <!-- <v-text-field type="password"> -->
-          <input v-model="password_confirmation" type="password" placeholder="至少8个字符" required />
+          <input
+            v-model="password_confirmation"
+            autocomplete="off"
+            type="password"
+            placeholder="至少8个字符"
+            required
+          />
           <img v-if="password_confirmation.length >= 8" src="@/assets/images/ok.svg" alt="" />
           <!-- </v-text-field> -->
         </div>

@@ -30,6 +30,7 @@
           <input
             type="text"
             v-model="username"
+            autocomplete="off"
             :placeholder="isActive ? 'Please enter your name' : '请输入您的昵称'"
           /><img v-if="username.length >= 4" src="@/assets/images/ok.svg" alt="" />
         </div>
@@ -41,6 +42,7 @@
           <input
             v-model="password"
             type="password"
+            autocomplete="off"
             :placeholder="isActive ? '8 character minimum' : '至少八个字符'"
             required
           /><img v-if="password.length >= 8" src="@/assets/images/ok.svg" alt="" />
