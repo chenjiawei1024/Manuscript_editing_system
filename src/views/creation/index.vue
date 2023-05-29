@@ -117,7 +117,7 @@
         :key="index"
         link
       >
-        <div>
+        <div @click="hightLightWords(item)">
           <span :class="$style['edit_before']">{{ item.before }}</span>
           <span>{{ ' ➡ ' }}</span>
           <span :class="$style['edit_after']">{{ item.after }}</span>
@@ -262,7 +262,7 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
-  <!-- 创建标签dialog -->
+  <!-- 关联标签dialog -->
   <v-dialog v-model="showTagAssociateDialog" width="450">
     <v-card>
       <v-card-title>
@@ -545,6 +545,20 @@ const createWordReplacement = () => {
     });
 };
 
+// 点击后，高亮可被替换的词句，并且取消之前的高亮
+const hightLightWords = (item: { before: string; after: string }) => {
+  const curContent = editorContent.value.replaceAll(' style="background-color: yellow"', '');
+  // const length = item.after.length;
+  // curContent.indexOf(item.before);
+  // const regex = new RegExp(`\\b${item.before}\\b`, 'gi');
+  const highlightedText = curContent.replace(
+    item.before,
+    `<span style="background-color: yellow">${item.before}</span>`,
+  );
+  console.log(highlightedText);
+  editorContent.value = highlightedText;
+};
+
 // 文章标签
 const AIClassifyList = ref<any[]>([]);
 const createTagClassify = () => {
@@ -796,6 +810,7 @@ const createShareFile = async () => {
   color: #333;
   z-index: 1;
 }
+
 .title-subtext {
   font-size: 14px;
   text-align: center;
@@ -872,6 +887,7 @@ const createShareFile = async () => {
 
 .edit_after {
   background-color: green;
+  color: white;
 }
 
 .loader-container {
@@ -885,15 +901,18 @@ const createShareFile = async () => {
 .loader {
   // width: 20px; /* 设置圆环的宽度 */
   // height: 20px; /* 设置圆环的高度 */
-  animation: spin 1s linear infinite; /* 设置动画，名称为"spin"，持续时间为2秒，线性运动，无限循环 */
+  animation: spin 1s linear infinite;
+  /* 设置动画，名称为"spin"，持续时间为2秒，线性运动，无限循环 */
 }
 
 @keyframes spin {
+  /* 起始状态，圆环没有旋转 */
   0% {
     transform: rotate(0deg);
-  } /* 起始状态，圆环没有旋转 */
+  }
+  /* 最终状态，圆环旋转一周，360度 */
   100% {
     transform: rotate(360deg);
-  } /* 最终状态，圆环旋转一周，360度 */
+  }
 }
 </style>
