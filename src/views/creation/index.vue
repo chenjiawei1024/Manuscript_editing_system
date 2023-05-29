@@ -435,7 +435,7 @@ const getHotSpots = async () => {
   hotList.value = resp;
 };
 // TODO: 要用的时候再打开！！！ 会有限额
-// getHotSpots();
+getHotSpots();
 
 const showHotspotDeatils = (index: number) => {
   showHotDetailDialog.value = true;
