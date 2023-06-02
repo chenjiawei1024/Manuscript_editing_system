@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-container>
+    <v-container class="ml-7 mr-7 w-auto" :fluid="true">
       <!-- 成功提示框 -->
       <v-alert
         v-model="success_alert"
@@ -42,7 +42,7 @@
       <div :class="$style.title">共享文件</div>
       <v-divider class="mb-2"></v-divider>
       <!-- 按钮组 -->
-      <v-container class="d-flex flex-row">
+      <v-container class="d-flex flex-row" :fluid="true">
         <CreateCard
           color="#f24e1e"
           icon="mdi-folder-account"
@@ -52,7 +52,7 @@
         ></CreateCard>
       </v-container>
       <!-- 文件/文件夹列表 -->
-      <v-container>
+      <v-container class="w-auto" :fluid="true">
         <v-row>
           <v-col v-for="file in fileList" xxl="1" lg="2" cols="2" md="3" sm="3" xs="6" :key="file.file_id">
             <FileCard

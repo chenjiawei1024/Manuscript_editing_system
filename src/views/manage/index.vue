@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-container>
+    <v-container class="ml-7 mr-7 w-auto" :fluid="true">
       <!-- 成功提示框 -->
       <v-alert
         v-model="success_alert"
@@ -46,7 +46,7 @@
       </v-breadcrumbs>
       <v-divider class="mb-2"></v-divider>
       <!-- 按钮组 -->
-      <v-container class="d-flex flex-row">
+      <v-container class="d-flex flex-row" :fluid="true">
         <CreateCard
           color="#f5bf5b"
           icon="mdi-folder"
@@ -72,7 +72,8 @@
         ></CreateCard>
       </v-container>
       <!-- 文件/文件夹列表 -->
-      <div :class="$style['card-container']">
+      <!-- <div :class="$style['card-container']"> -->
+      <v-container class="w-auto" :fluid="true">
         <v-row>
           <v-col v-for="folder in folderList" xxl="1" lg="2" cols="2" md="3" sm="3" xs="6" :key="folder.folder_id">
             <FolderCard
@@ -101,7 +102,8 @@
             ></FileCard>
           </v-col>
         </v-row>
-      </div>
+      </v-container>
+      <!-- </div> -->
       <!-- 创建新文件夹dialog -->
       <v-dialog v-model="showFolderDialog" width="450">
         <v-card>

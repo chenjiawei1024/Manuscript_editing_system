@@ -74,17 +74,18 @@
         :init="{
           skin: 'snow',
           branding: false,
-          height: 580,
+          height: 520,
           plugins: 'lists link image table code help wordcount',
         }"
       />
       <v-card class="w-100 mt-4" :class="$style['btn-container']">
-        <template v-slot:title>文稿润色功能</template>
+        <template v-slot:title>文稿辅助编辑功能</template>
         <template v-slot:text>
           <div :class="$style['btn-subcontainer']">
             <v-btn color="primary" @click="createWordReplacement">词句润色</v-btn>
             <v-btn color="secondary" @click="createTagClassify">标签分类</v-btn>
             <v-btn color="purple" @click="createAITitle">标题生成</v-btn>
+            <v-btn color="blue" @click="createAIImg">插图生成</v-btn>
           </div>
         </template>
       </v-card>
@@ -94,7 +95,7 @@
   <v-navigation-drawer location="right" width="300">
     <v-sheet color="grey-lighten-3" :class="$style['hot-news']" width="100%" height="128">
       <div :class="$style.title">
-        <span :class="$style['title-text']">文稿润色</span>
+        <span :class="$style['title-text']">辅助创作</span>
         <span :class="$style['title-subtext']">词句替换，标签分类，标题生成等</span>
         <span :class="$style.circle"></span>
       </div>
@@ -134,6 +135,35 @@
         @click="associateTag(item.title)"
       >
         <v-card class="pa-1" color="secondary">{{ item.title }}</v-card>
+      </v-list-item>
+    </v-list>
+    <!-- 文章插图 -->
+    <v-list v-else-if="AIImgList.length">
+      <v-list-item
+        class="d-flex flex-row justify-center align-center"
+        v-for="(item, index) in AIImgList"
+        :key="index"
+        link
+        @click="showDownloadAIImg(item.download)"
+      >
+        <v-img class="ma-1" :width="100" :src="item.src" aspect-ratio="1" cover>
+          <template v-slot:placeholder>
+            <v-row class="fill-height ma-0" align="center" justify="center">
+              <v-progress-circular indeterminate color="grey-lighten-5"></v-progress-circular>
+            </v-row>
+          </template>
+          <template v-slot:error>
+            <div>
+              <v-img
+                src="https://picsum.photos/500/500?image=11"
+                lazy-src="https://picsum.photos/10/6?image=11"
+                aspect-ratio="1"
+                cover
+                class="bg-grey-lighten-2"
+              ></v-img>
+            </div>
+          </template>
+        </v-img>
       </v-list-item>
     </v-list>
     <div v-else-if="showLoading" :class="$style['loader-container']">
@@ -304,20 +334,35 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
+  <v-dialog v-model="showAIImgDialog" width="450">
+    <v-card>
+      <v-card-title>
+        <span class="headline">Download Image</span>
+      </v-card-title>
+      <v-card-text>
+        <v-text-field v-model="img_name" label="Image name"></v-text-field>
+      </v-card-text>
+      <v-card-actions>
+        <v-btn color="primary" @click="downloadAIImg">Download</v-btn>
+        <v-btn color="secondary" @click="showAIImgDialog = false">Cancel</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script lang="ts" setup>
 import { ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import Editor from '@tinymce/tinymce-vue';
 import instance, { getHotList } from '@/api';
-import type { AIRespItem, NewsItem, AIRespListItem } from '@/types/creation';
+import type { AIRespItem, NewsItem, AIRespListItem, AIImgRespListItem, ImgItem, ImgShowItem } from '@/types/creation';
 import type { AxiosResponse } from 'axios';
 import { computed } from 'vue';
 import type { FileDetailItem } from '@/types/manage';
 import { onBeforeUnmount } from 'vue';
 
 const route = useRoute();
+const router = useRouter();
 const isNew = computed(() => {
   return !newFileName.value;
 });
@@ -463,6 +508,8 @@ const typingSpeed = ref(100);
 const blinking = ref(true);
 const askAIQuestions = async () => {
   randomAnswer.value = '';
+  currentIndex.value = 0;
+  blinking.value = true;
   showAIDialog.value = true;
   instance({
     method: 'post',
@@ -555,7 +602,6 @@ const hightLightWords = (item: { before: string; after: string }) => {
     item.before,
     `<span style="background-color: yellow">${item.before}</span>`,
   );
-  console.log(highlightedText);
   editorContent.value = highlightedText;
 };
 
@@ -617,6 +663,78 @@ const createAITitle = () => {
       console.error('网络问题:', error);
       showLoading.value = false;
     });
+};
+
+const AIImgList = ref<ImgShowItem[]>([]);
+const showAIImgDialog = ref(false);
+// 文章插图自动生成
+const createAIImg = () => {
+  const html = editorContent.value;
+  const tag = document.createElement('div');
+  tag.innerHTML = html;
+  const text = tag.textContent;
+  showLoadingStatus();
+  instance({
+    method: 'post',
+    url: '/api/creation/img',
+    data: {
+      question: text,
+    },
+  })
+    .then((resp: AxiosResponse<AIImgRespListItem>) => {
+      AIImgList.value = resp.data.results
+        ? resp.data.results.map((item) => {
+            return {
+              download: `${item.links.download_location}&client_id=QsT7zPVdJTkBJbwpNoZVdowU9_RnvRExx2wSuf4ZYX0`,
+              src: item.urls.thumb,
+            };
+          })
+        : [];
+      console.log(AIImgList.value);
+      showLoading.value = false;
+    })
+    .catch((error) => {
+      randomAnswer.value = '网络问题，无法获取答案，请重新尝试！';
+      console.error('网络问题:', error);
+      showLoading.value = false;
+    });
+};
+
+const img_name = ref('');
+const download_url = ref('');
+
+const showDownloadAIImg = (url: string) => {
+  showAIImgDialog.value = true;
+  download_url.value = url;
+};
+
+const downloadAIImg = async () => {
+  showAIImgDialog.value = false;
+  const newUrl = download_url.value;
+  download_url.value = '';
+  const resp = await instance({
+    method: 'get',
+    url: newUrl,
+    headers: {
+      Authorization: 'Client-ID QsT7zPVdJTkBJbwpNoZVdowU9_RnvRExx2wSuf4ZYX0',
+    },
+  });
+  if (resp.data?.url) {
+    fetch(resp.data.url)
+      .then((response) => response.blob())
+      .then((blob) => {
+        const downloadLink = document.createElement('a');
+        downloadLink.href = URL.createObjectURL(blob);
+        downloadLink.download = img_name.value;
+
+        // 触发点击事件进行下载
+        downloadLink.click();
+        // showSuccessAlert('download successfully!');
+        img_name.value = '';
+        // 清理URL对象
+        URL.revokeObjectURL(downloadLink.href);
+      });
+  }
 };
 
 // 用于创建新的文稿
@@ -693,6 +811,9 @@ const deleteFile = () => {
     .then(() => {
       showDeleteFileDialog.value = false;
       showSuccessAlert('删除成功！');
+      setTimeout(() => {
+        router.push('/manage');
+      }, 1100);
     })
     .catch((error) => {
       console.error('删除失败:', error);

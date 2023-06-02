@@ -19,3 +19,25 @@ export interface AIRespItem {
 export interface AIRespListItem {
   result: string[];
 }
+
+export interface AIImgRespListItem {
+  results: ImgItem[];
+}
+
+export interface ImgItem {
+  links: {
+    download: string;
+    download_location: string;
+  };
+  urls: {
+    full: string;
+    raw: string;
+    small: string;
+    thumb: string;
+  };
+}
+
+export interface ImgShowItem {
+  download: string;
+  src: string;
+}
